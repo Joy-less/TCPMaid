@@ -1,3 +1,5 @@
+![Icon](Assets/Icon.png)
+
 # TCPMaid
  
 An easy, powerful and lightweight TCP client/server in C#.
