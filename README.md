@@ -1,8 +1,8 @@
-# Net-sama
+# TCPMaid
  
 An easy, powerful and lightweight TCP client/server in C#.
 
-Net-sama makes it easy to setup a robust client & server, send messages and requests, and provide your own SSL certificate.
+TCPMaid makes it easy to setup a robust client & server, send messages and requests, and provide your own SSL certificate.
 
 ## Features
 - Easy client & server setup
@@ -17,9 +17,9 @@ Net-sama makes it easy to setup a robust client & server, send messages and requ
 
 ## Example
 
-```csharp
+```cs
 public static void Server() {
-    NetSamaServer Server = new(5000);
+    TCPMaidServer Server = new(5000);
     Server.OnConnect += OnConnect;
 
     Server.Start();
@@ -36,9 +36,9 @@ public static void Server() {
     }
 }
 ```
-```csharp
+```cs
 public static async void Client() {
-    NetSamaClient Client = new();
+    TCPMaidClient Client = new();
 
     await Client.ConnectAsync("localhost", 5000);
     Connection Connection = Client.Connection!;
@@ -46,19 +46,13 @@ public static async void Client() {
     await Connection.SendAsync(new ExampleMessage("hello server!"));
 }
 ```
-```csharp
+```cs
 public class ExampleMessage : Message {
     [JsonProperty] public readonly string ExampleText;
     
     public ExampleMessage(string example_text) {
         ExampleText = example_text;
     }
-}
-```
-```csharp
-static void Main() {
-    Test.Server();
-    Test.Client();
 }
 ```
 #### Output

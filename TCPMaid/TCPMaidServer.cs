@@ -6,11 +6,12 @@ using System.Net.Sockets;
 using System.Net.Security;
 using System.Security.Cryptography.X509Certificates;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 
 #nullable enable
 
-namespace NetSama {
-    public sealed class NetSamaServer : NetSamaBase {
+namespace TCPMaid {
+    public sealed class TCPMaidServer : TCPMaidBase {
         public readonly int Port;
         public bool Active { get; private set; } = true;
         public ServerOptions Options => (ServerOptions)BaseOptions;
@@ -24,16 +25,12 @@ namespace NetSama {
 
         private X509Certificate2? Certificate;
 
-        public NetSamaServer(int port, ServerOptions? options = null) : base(options ?? new ServerOptions()) {
+        public TCPMaidServer(int port, ServerOptions? options = null) : base(options ?? new ServerOptions()) {
             // Initialise port field
             Port = port;
             // Create TcpListener
             Listener = TcpListener.Create(Port);
             Listener.Server.NoDelay = true;
-            // Remove clients upon disconnect
-            OnDisconnect += (Client, ByRemote, Reason) => {
-                Clients.TryRemove(Client, out _);
-            };
         }
         public void Start(X509Certificate2? certificate = null) {
             // Initialise certificate field
@@ -57,11 +54,10 @@ namespace NetSama {
             OnStop?.Invoke();
         }
         public async Task BroadcastAsync(Message Message, Connection? Exclude = null, Predicate<Connection>? ExcludeWhere = null) {
-            foreach (Connection Client in GetClients()) {
-                if (Client != Exclude && (ExcludeWhere is null || !ExcludeWhere(Client))) {
-                    await Client.SendAsync(Message);
-                }
-            }
+            await DoForAllClientsAsync(async Client => await Client.SendAsync(Message), Exclude, ExcludeWhere);
+        }
+        public async Task DisconnectAllAsync(Connection? Exclude = null, Predicate<Connection>? ExcludeWhere = null) {
+            await DoForAllClientsAsync(async Client => await Client.DisconnectAsync(), Exclude, ExcludeWhere);
         }
         public Connection[] GetClients() {
             return Clients.Keys.ToArray();
@@ -109,18 +105,33 @@ namespace NetSama {
             // Disconnect if there are too many clients
             if (Options.MaxClientCount is not null && Clients.Count >= Options.MaxClientCount) {
                 await Client.DisconnectAsync(DisconnectReason.TooManyClients);
+                return;
             }
 
             // Listen to disconnect event
-            Client.OnDisconnect += (ByRemote, Reason) => OnDisconnect?.Invoke(Client, ByRemote, Reason);
+            Client.OnDisconnect += (ByRemote, Reason) => {
+                // Remove client from connections
+                Clients.TryRemove(Client, out _);
+                // Invoke disconnect event
+                OnDisconnect?.Invoke(Client, ByRemote, Reason);
+            };
             // Invoke connect event
             OnConnect?.Invoke(Client);
-            // Add client to connected list
+            // Add client to connections
             Clients.TryAdd(Client, 0);
             // Listen to client
             _ = ListenForMessages(Client);
             // Start measuring ping
             _ = StartPingPong(Client);
+        }
+        private async Task DoForAllClientsAsync(Func<Connection, Task> Action, Connection? Exclude, Predicate<Connection>? ExcludeWhere) {
+            List<Task> Tasks = new();
+            foreach (Connection Client in GetClients()) {
+                if (Client != Exclude && (ExcludeWhere is null || !ExcludeWhere(Client))) {
+                    Tasks.Add(Action(Client));
+                }
+            }
+            await Task.WhenAll(Tasks);
         }
     }
     public sealed class ServerOptions : BaseOptions {

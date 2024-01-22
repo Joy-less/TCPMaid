@@ -6,8 +6,8 @@ using System.Net.Security;
 
 #nullable enable
 
-namespace NetSama {
-    public class NetSamaClient : NetSamaBase {
+namespace TCPMaid {
+    public class TCPMaidClient : TCPMaidBase {
         public readonly bool UseSsl;
 
         public ClientOptions Options => (ClientOptions)BaseOptions;
@@ -17,7 +17,7 @@ namespace NetSama {
         public event Action<Connection>? OnConnect;
         public event Action<Connection, bool, string>? OnDisconnect;
 
-        public NetSamaClient(bool use_ssl = false, ClientOptions? options = null) : base(options ?? new ClientOptions()) {
+        public TCPMaidClient(bool use_ssl = false, ClientOptions? options = null) : base(options ?? new ClientOptions()) {
             UseSsl = use_ssl;
         }
         public async Task<bool> ConnectAsync(string ServerIpAddress, int ServerPort) {
@@ -60,7 +60,10 @@ namespace NetSama {
             }
 
             // Listen to disconnect event
-            Connection.OnDisconnect += (ByRemote, Reason) => OnDisconnect?.Invoke(Connection, ByRemote, Reason);
+            Connection.OnDisconnect += (ByRemote, Reason) => {
+                // Invoke disconnect event
+                OnDisconnect?.Invoke(Connection, ByRemote, Reason);
+            };
             // Listen to server
             _ = ListenForMessages(Connection);
             // Start measuring ping

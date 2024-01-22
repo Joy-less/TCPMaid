@@ -11,12 +11,12 @@ using System.Net;
 using System.Net.Sockets;
 using System.Net.Security;
 using Newtonsoft.Json;
-using static NetSama.NetSamaBase;
+using static TCPMaid.TCPMaidBase;
 
 #nullable enable
 
-namespace NetSama {
-    public abstract class NetSamaBase {
+namespace TCPMaid {
+    public abstract class TCPMaidBase {
         public readonly BaseOptions BaseOptions;
 
         // Sizes of packet components
@@ -24,7 +24,7 @@ namespace NetSama {
         internal const int MessageIdSize = sizeof(ulong);
         internal const int MessageLengthSize = sizeof(int);
 
-        protected NetSamaBase(BaseOptions base_options) {
+        protected TCPMaidBase(BaseOptions base_options) {
             BaseOptions = base_options;
         }
 
@@ -32,7 +32,7 @@ namespace NetSama {
             // Listen for disconnect messages
             Connection.OnReceive += (Message Message) => {
                 if (Message is DisconnectMessage DisconnectMessage) {
-                    Connection.DisconnectByRequestAsync(DisconnectMessage.Reason);
+                    Connection.DisconnectByRequest(DisconnectMessage.Reason);
                 }
             };
             // Listen for incoming packets
@@ -177,7 +177,7 @@ namespace NetSama {
     }
     public sealed class Connection {
         /// <summary>The Net-sama instance this connection belongs to.</summary>
-        public readonly NetSamaBase NetSama;
+        public readonly TCPMaidBase TCPMaid;
         /// <summary>On the server, this is the remote client. On the client, this is the local client.</summary>
         public readonly TcpClient Client;
         /// <summary>The IP address and port of the remote connection.</summary>
@@ -195,8 +195,8 @@ namespace NetSama {
 
         private readonly SemaphoreSlim NetworkSemaphore = new(1, 1);
 
-        internal Connection(NetSamaBase net_sama, TcpClient client, IPEndPoint end_point, Stream stream, NetworkStream inner_stream) {
-            NetSama = net_sama;
+        internal Connection(TCPMaidBase tcp_maid_base, TcpClient client, IPEndPoint end_point, Stream stream, NetworkStream inner_stream) {
+            TCPMaid = tcp_maid_base;
             Client = client;
             EndPoint = end_point;
             Stream = stream;
@@ -210,7 +210,7 @@ namespace NetSama {
             // Get bytes from message
             byte[] Bytes = Message.ToByteArray();
             // Split bytes into smaller fragments
-            byte[][] ByteFragments = FragmentArray(Bytes, NetSama.BaseOptions.MaxPacketSize);
+            byte[][] ByteFragments = FragmentArray(Bytes, TCPMaid.BaseOptions.MaxPacketSize);
 
             // Create packets from byte fragments
             byte[][] Packets = new byte[ByteFragments.Length][];
@@ -283,7 +283,7 @@ namespace NetSama {
             // Invoke on disconnect
             OnDisconnect?.Invoke(false, Reason);
         }
-        internal void DisconnectByRequestAsync(string Reason = DisconnectReason.NoReasonGiven) {
+        internal void DisconnectByRequest(string Reason = DisconnectReason.NoReasonGiven) {
             // Mark as disconnected
             if (!Connected) return;
             Connected = false;
