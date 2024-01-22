@@ -39,10 +39,8 @@ public static void Server() {
 ```csharp
 public static async void Client() {
     NetSamaClient Client = new();
-    Client.OnConnect += OnConnect;
 
     await Client.ConnectAsync("localhost", 5000);
-
     Connection Connection = Client.Connection!;
 
     await Connection.SendAsync(new ExampleMessage("hello server!"));
