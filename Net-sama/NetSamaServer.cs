@@ -10,7 +10,7 @@ using System.Collections.Concurrent;
 #nullable enable
 
 namespace NetSama {
-    public sealed class NetCodeServer : NetSamaBase {
+    public sealed class NetSamaServer : NetSamaBase {
         public readonly int Port;
         public bool Active { get; private set; } = true;
         public ServerOptions Options => (ServerOptions)BaseOptions;
@@ -24,7 +24,7 @@ namespace NetSama {
 
         private X509Certificate2? Certificate;
 
-        public NetCodeServer(int port, ServerOptions? options = null) : base(options ?? new ServerOptions()) {
+        public NetSamaServer(int port, ServerOptions? options = null) : base(options ?? new ServerOptions()) {
             // Initialise port field
             Port = port;
             // Create TcpListener

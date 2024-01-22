@@ -7,7 +7,7 @@ using System.Net.Security;
 #nullable enable
 
 namespace NetSama {
-    public class NetCodeClient : NetSamaBase {
+    public class NetSamaClient : NetSamaBase {
         public readonly bool UseSsl;
 
         public ClientOptions Options => (ClientOptions)BaseOptions;
@@ -17,7 +17,7 @@ namespace NetSama {
         public event Action<Connection>? OnConnect;
         public event Action<Connection, bool, string>? OnDisconnect;
 
-        public NetCodeClient(bool use_ssl = false, ClientOptions? options = null) : base(options ?? new ClientOptions()) {
+        public NetSamaClient(bool use_ssl = false, ClientOptions? options = null) : base(options ?? new ClientOptions()) {
             UseSsl = use_ssl;
         }
         public async Task<bool> ConnectAsync(string ServerIpAddress, int ServerPort) {
