@@ -1,4 +1,4 @@
-![Icon](Assets/Icon Mini.png)
+![Icon](Assets/IconMini.png)
 
 # TCPMaid
  
