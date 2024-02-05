@@ -15,14 +15,14 @@ using static TCPMaid.TCPMaidBase;
 
 namespace TCPMaid {
     public abstract class TCPMaidBase {
-        public readonly BaseOptions BaseOptions;
+        internal readonly BaseOptions BaseOptions;
 
         // Sizes of packet components
         internal const int PacketLengthSize = sizeof(int);
         internal const int MessageIdSize = sizeof(ulong);
         internal const int MessageLengthSize = sizeof(int);
 
-        protected TCPMaidBase(BaseOptions base_options) {
+        internal TCPMaidBase(BaseOptions base_options) {
             BaseOptions = base_options;
         }
 
@@ -193,6 +193,8 @@ namespace TCPMaid {
 
         private readonly SemaphoreSlim NetworkSemaphore = new(1, 1);
 
+        private static ulong LastMessageId;
+
         internal Connection(TCPMaidBase tcp_maid_base, TcpClient client, IPEndPoint end_point, Stream stream, NetworkStream inner_stream) {
             TCPMaid = tcp_maid_base;
             Client = client;
@@ -203,7 +205,7 @@ namespace TCPMaid {
 
         public async Task<bool> SendAsync(Message Message) {
             // Generate message ID
-            ulong MessageId = IdGenerator.Generate();
+            ulong MessageId = Interlocked.Increment(ref LastMessageId);
 
             // Get bytes from message
             byte[] Bytes = Message.ToByteArray();
@@ -337,12 +339,6 @@ namespace TCPMaid {
             return Fragments;
         }
     }
-    internal static class IdGenerator {
-        private static ulong LastId = 0;
-        public static ulong Generate() {
-            return Interlocked.Increment(ref LastId);
-        }
-    }
     public abstract class BaseOptions {
         /// <summary>How many seconds of silence before a connection is dropped.</summary>
         public double DisconnectTimeout = 10;
@@ -409,7 +405,9 @@ namespace TCPMaid {
         }
     }
     public abstract class Request : Message {
-        [JsonProperty] public readonly ulong RequestId = IdGenerator.Generate();
+        [JsonProperty] public readonly ulong RequestId = Interlocked.Increment(ref LastRequestId);
+
+        private static ulong LastRequestId;
     }
     public abstract class Response : Message {
         [JsonProperty] public readonly ulong RequestId;
