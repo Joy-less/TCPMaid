@@ -1,9 +1,9 @@
-![Icon](Assets/IconMini.png)
+![Icon](https://raw.githubusercontent.com/Joy-less/TCPMaid/main/Assets/IconMini.png)
 
 # TCPMaid
 
 [![NuGet](https://img.shields.io/nuget/v/TCPMaid.svg)](https://www.nuget.org/packages/TCPMaid)
- 
+
 An easy, powerful and lightweight TCP client/server in C#.
 
 TCPMaid makes it easy to setup a robust client & server, send messages and requests, and provide your own SSL certificate.
