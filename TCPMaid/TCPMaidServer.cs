@@ -14,6 +14,7 @@ namespace TCPMaid {
         public bool Active { get; private set; } = true;
         public ServerOptions Options => (ServerOptions)BaseOptions;
 
+        public event Action? OnStart;
         public event Action? OnStop;
         public event Action<Connection>? OnConnect;
         public event Action<Connection, bool, string>? OnDisconnect;
@@ -37,14 +38,16 @@ namespace TCPMaid {
             Listener.Start();
             // Accept clients
             _ = AcceptClientAsync();
+            // Invoke start event
+            OnStart?.Invoke();
         }
-        public async Task StopAsync() {
+        public void Stop() {
             // Mark the server as deactivated
             if (!Active) return;
             Active = false;
             // Disconnect from all clients
-            while (Clients.Keys.FirstOrDefault() is Connection Client) {
-                await Client.DisconnectAsync(DisconnectReason.ServerShutdown);
+            foreach (Connection Client in GetClients()) {
+                _ = Client.DisconnectAsync(DisconnectReason.ServerShutdown);
             }
             // Stop listener
             Listener.Stop();
@@ -52,10 +55,10 @@ namespace TCPMaid {
             OnStop?.Invoke();
         }
         public async Task BroadcastAsync(Message Message, Connection? Exclude = null, Predicate<Connection>? ExcludeWhere = null) {
-            await DoForAllClientsAsync(async Client => await Client.SendAsync(Message), Exclude, ExcludeWhere);
+            await ForEachClientAsync(async Client => await Client.SendAsync(Message), Exclude, ExcludeWhere);
         }
         public async Task DisconnectAllAsync(Connection? Exclude = null, Predicate<Connection>? ExcludeWhere = null) {
-            await DoForAllClientsAsync(async Client => await Client.DisconnectAsync(), Exclude, ExcludeWhere);
+            await ForEachClientAsync(async Client => await Client.DisconnectAsync(), Exclude, ExcludeWhere);
         }
         public Connection[] GetClients() {
             return Clients.Keys.ToArray();
@@ -74,12 +77,17 @@ namespace TCPMaid {
                 _ = AcceptClientAsync();
             }
 
-            // Get the client's network stream
-            NetworkStream NetworkStream = TcpClient.GetStream();
+            // Ensure server is active
+            if (!Active) {
+                return;
+            }
 
             // Create connection (SSL or not)
             Connection Client;
             try {
+                // Get the client's network stream
+                NetworkStream NetworkStream = TcpClient.GetStream();
+
                 // SSL (encrypted)
                 if (Certificate is not null) {
                     // Create SSL stream
@@ -122,7 +130,7 @@ namespace TCPMaid {
             // Start measuring ping
             _ = StartPingPong(Client);
         }
-        private async Task DoForAllClientsAsync(Func<Connection, Task> Action, Connection? Exclude, Predicate<Connection>? ExcludeWhere) {
+        private async Task ForEachClientAsync(Func<Connection, Task> Action, Connection? Exclude, Predicate<Connection>? ExcludeWhere) {
             List<Task> Tasks = new();
             foreach (Connection Client in GetClients()) {
                 if (Client != Exclude && (ExcludeWhere is null || !ExcludeWhere(Client))) {
