@@ -13,8 +13,6 @@ using System.Net.Security;
 using Newtonsoft.Json;
 using static TCPMaid.TCPMaidBase;
 
-#nullable enable
-
 namespace TCPMaid {
     public abstract class TCPMaidBase {
         public readonly BaseOptions BaseOptions;
@@ -176,7 +174,7 @@ namespace TCPMaid {
         }
     }
     public sealed class Connection {
-        /// <summary>The Net-sama instance this connection belongs to.</summary>
+        /// <summary>The TCPMaid instance this connection belongs to.</summary>
         public readonly TCPMaidBase TCPMaid;
         /// <summary>On the server, this is the remote client. On the client, this is the local client.</summary>
         public readonly TcpClient Client;

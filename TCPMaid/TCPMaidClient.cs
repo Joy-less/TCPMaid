@@ -1,10 +1,8 @@
 ﻿using System;
-using System.Net.Sockets;
-using System.Net;
 using System.Threading.Tasks;
+using System.Net;
+using System.Net.Sockets;
 using System.Net.Security;
-
-#nullable enable
 
 namespace TCPMaid {
     public class TCPMaidClient : TCPMaidBase {

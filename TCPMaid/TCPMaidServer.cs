@@ -1,14 +1,12 @@
 ﻿using System;
 using System.Threading.Tasks;
 using System.Linq;
+using System.Collections.Generic;
+using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Sockets;
 using System.Net.Security;
 using System.Security.Cryptography.X509Certificates;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-
-#nullable enable
 
 namespace TCPMaid {
     public sealed class TCPMaidServer : TCPMaidBase {
