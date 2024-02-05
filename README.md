@@ -1,6 +1,8 @@
 ![Icon](Assets/IconMini.png)
 
 # TCPMaid
+
+[![NuGet](https://img.shields.io/nuget/v/TCPMaid.svg)](https://www.nuget.org/packages/TCPMaid)
  
 An easy, powerful and lightweight TCP client/server in C#.
 
@@ -8,11 +10,11 @@ TCPMaid makes it easy to setup a robust client & server, send messages and reque
 
 ## Features
 - Easy client & server setup
-- Support for SSL encryption and certificates
-- Automatic serialisation of messages
-- Send requests and wait for a response
-- Automatic fragmentation of large messages
-- Support for IPv4 and IPv6
+- Supports SSL encryption and certificates
+- Automatically serialises messages
+- Send requests and await a response
+- Automatically fragments large messages
+- Supports IPv4 and IPv6
 
 ## Dependencies
 - [Newtonsoft.Json](https://www.newtonsoft.com/json)
@@ -21,11 +23,14 @@ TCPMaid makes it easy to setup a robust client & server, send messages and reque
 
 ```cs
 public static void Server() {
+    // Start server on port 5000
     TCPMaidServer Server = new(5000);
-    Server.OnConnect += OnConnect;
-
     Server.Start();
+
+    // Listen to connect event
+    Server.OnConnect += OnConnect;
     
+    // Events
     void OnConnect(Connection Client) {
         Client.OnReceive += Message => OnReceive(Client, Message);
         
@@ -40,11 +45,11 @@ public static void Server() {
 ```
 ```cs
 public static async void Client() {
+    // Connect client to server
     TCPMaidClient Client = new();
-
     await Client.ConnectAsync("localhost", 5000);
-    Connection Connection = Client.Connection!;
 
+    // Say hello to server
     await Connection.SendAsync(new ExampleMessage("hello server!"));
 }
 ```
