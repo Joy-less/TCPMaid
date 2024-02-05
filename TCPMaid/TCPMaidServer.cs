@@ -11,7 +11,7 @@ using System.Security.Cryptography.X509Certificates;
 namespace TCPMaid {
     public sealed class TCPMaidServer : TCPMaidBase {
         public readonly int Port;
-        public bool Active { get; private set; } = true;
+        public bool Active { get; private set; }
         public ServerOptions Options => (ServerOptions)BaseOptions;
 
         public event Action? OnStart;
@@ -40,6 +40,8 @@ namespace TCPMaid {
             _ = AcceptClientAsync();
             // Invoke start event
             OnStart?.Invoke();
+            // Mark the server as activated
+            Active = true;
         }
         public void Stop() {
             // Mark the server as deactivated
