@@ -9,7 +9,7 @@
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
     <Title>TCPMaid</Title>
     <FileVersion></FileVersion>
-    <Version>1.0.2</Version>
+    <Version>1.0.3</Version>
     <Authors>Joyless</Authors>
     <PackageTags>TCP; Netcode; Networking; Server; Client</PackageTags>
     <Description>An easy, powerful and lightweight TCP client/server in C#.</Description>

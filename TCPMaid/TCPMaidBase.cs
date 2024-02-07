@@ -99,7 +99,7 @@ namespace TCPMaid {
                         // Remove pending message
                         PendingMessages.Remove(MessageId);
                         // Get full message
-                        Message? Message = Message.FromByteArray(PendingMessage.Bytes);
+                        Message? Message = Message.FromBytes(PendingMessage.Bytes);
                         // Handle message
                         if (Message is not null) {
                             Connection.InvokeOnReceive(Message);
@@ -208,7 +208,7 @@ namespace TCPMaid {
             ulong MessageId = Interlocked.Increment(ref LastMessageId);
 
             // Get bytes from message
-            byte[] Bytes = Message.ToByteArray();
+            byte[] Bytes = Message.ToBytes();
             // Split bytes into smaller fragments
             byte[][] ByteFragments = FragmentArray(Bytes, TCPMaid.BaseOptions.MaxPacketSize);
 
@@ -297,7 +297,12 @@ namespace TCPMaid {
                 OnReceive?.Invoke(Message);
             }
             catch (Exception Ex) {
-                _ = DisconnectAsync(DisconnectReason.Error + " (" + Ex.GetType().Name + ")");
+                // Get error message (message hidden for server errors)
+                string Error = TCPMaid is TCPMaidClient
+                    ? $"{Ex.GetType().Name}: {Ex.Message}"
+                    : Ex.GetType().Name;
+                // Disconnect on error
+                _ = DisconnectAsync($"{DisconnectReason.Error} ({Error})");
             }
         }
         private async Task SendRawAsync(byte[] Data) {
@@ -340,13 +345,13 @@ namespace TCPMaid {
         }
     }
     public abstract class BaseOptions {
-        /// <summary>How many seconds of silence before a connection is dropped.</summary>
+        /// <summary>How many seconds of silence before a connection is dropped. Default: 10</summary>
         public double DisconnectTimeout = 10;
         /// <summary>The size of the network buffer in bytes. Uses more memory, but speeds up transmission of larger messages. Default: 30kB</summary>
         public int BufferSize = 30_000;
         /// <summary>The maximum size of a packet in bytes before it will be broken up to avoid congestion. Default: 750kB</summary>
         public int MaxPacketSize = 750_000;
-        /// <summary>How many seconds before sending another <see cref="PingRequest"/> to measure the connection's ping.</summary>
+        /// <summary>How many seconds before sending another <see cref="PingRequest"/> to measure the connection's ping. Default: 0.5</summary>
         public double PingRequestInterval = 0.5;
     }
     public static class DisconnectReason {
@@ -354,7 +359,7 @@ namespace TCPMaid {
         public const string Unknown = "Unknown.";
         /// <summary>No disconnect reason was given.</summary>
         public const string NoReasonGiven = "No reason given.";
-        /// <summary>The client/server has not sent data for too long (often due to a bad internet connection).</summary>
+        /// <summary>The client/server has not sent data for too long (usually due to a bad internet connection).</summary>
         public const string Timeout = "Connection timed out.";
         /// <summary>The server has too many clients.</summary>
         public const string TooManyClients = "The server has too many clients.";
@@ -377,13 +382,13 @@ namespace TCPMaid {
             MessageTypes.TryGetValue(Name, out Type? Type);
             return Type;
         }
-        public byte[] ToByteArray() {
+        public byte[] ToBytes() {
             // Get message name and serialise message data
             (string Name, string Serialised) = (GetType().Name, JsonConvert.SerializeObject(this));
             // Create message bytes
             return Encoding.UTF8.GetBytes(Name + NameDataSeparator + Serialised);
         }
-        public static Message? FromByteArray(byte[] Bytes) {
+        public static Message? FromBytes(byte[] Bytes) {
             // Get message parts from bytes
             string[] Parts = Encoding.UTF8.GetString(Bytes).Split(NameDataSeparator, 2);
             // Ensure bytes are correctly formatted

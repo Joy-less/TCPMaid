@@ -48,9 +48,7 @@ namespace TCPMaid {
             if (!Active) return;
             Active = false;
             // Disconnect from all clients
-            foreach (Connection Client in GetClients()) {
-                _ = Client.DisconnectAsync(DisconnectReason.ServerShutdown);
-            }
+            _ = DisconnectAllAsync(DisconnectReason.ServerShutdown);
             // Stop listener
             Listener.Stop();
             // Invoke stop event
@@ -59,12 +57,13 @@ namespace TCPMaid {
         public async Task BroadcastAsync(Message Message, Connection? Exclude = null, Predicate<Connection>? ExcludeWhere = null) {
             await ForEachClientAsync(async Client => await Client.SendAsync(Message), Exclude, ExcludeWhere);
         }
-        public async Task DisconnectAllAsync(Connection? Exclude = null, Predicate<Connection>? ExcludeWhere = null) {
-            await ForEachClientAsync(async Client => await Client.DisconnectAsync(), Exclude, ExcludeWhere);
+        public async Task DisconnectAllAsync(string Reason = DisconnectReason.NoReasonGiven, Connection? Exclude = null, Predicate<Connection>? ExcludeWhere = null) {
+            await ForEachClientAsync(async Client => await Client.DisconnectAsync(Reason), Exclude, ExcludeWhere);
         }
         public Connection[] GetClients() {
             return Clients.Keys.ToArray();
         }
+        public int ClientCount => Clients.Count;
 
         private async Task AcceptClientAsync() {
             // Wait for a client to connect
@@ -134,18 +133,18 @@ namespace TCPMaid {
         }
         private async Task ForEachClientAsync(Func<Connection, Task> Action, Connection? Exclude, Predicate<Connection>? ExcludeWhere) {
             List<Task> Tasks = new();
-            foreach (Connection Client in GetClients()) {
-                if (Client != Exclude && (ExcludeWhere is null || !ExcludeWhere(Client))) {
-                    Tasks.Add(Action(Client));
+            foreach (KeyValuePair<Connection, byte> Client in Clients) {
+                if (Client.Key != Exclude && (ExcludeWhere is null || !ExcludeWhere(Client.Key))) {
+                    Tasks.Add(Action(Client.Key));
                 }
             }
             await Task.WhenAll(Tasks);
         }
     }
     public sealed class ServerOptions : BaseOptions {
-        /// <summary>The maximum number of clients that can connect to the server at once.</summary>
+        /// <summary>The maximum number of clients that can connect to the server at once. Default: <see langword="null"/></summary>
         public int? MaxClientCount = null;
-        /// <summary>The maximum number of pending bytes from the client. Default: 4MB</summary>
+        /// <summary>The maximum number of pending bytes from a client before it is disconnected. Default: 4MB</summary>
         public int MaxPendingSize = 4_000_000;
     }
 }
