@@ -110,7 +110,7 @@ namespace TCPMaid {
             }
 
             // Disconnect if there are too many clients
-            if (Options.MaxClientCount is not null && Clients.Count >= Options.MaxClientCount) {
+            if (Options.MaxClients is not null && Clients.Count >= Options.MaxClients) {
                 await Client.DisconnectAsync(DisconnectReason.TooManyClients);
                 return;
             }
@@ -142,9 +142,11 @@ namespace TCPMaid {
         }
     }
     public sealed class ServerOptions : BaseOptions {
-        /// <summary>The maximum number of clients that can connect to the server at once. Default: <see langword="null"/></summary>
-        public int? MaxClientCount = null;
-        /// <summary>The maximum number of pending bytes from a client before it is disconnected. Default: 4MB</summary>
+        /// <summary>The maximum number of clients that can connect to the server at once.<br/>
+        /// Default: <see langword="null"/></summary>
+        public int? MaxClients = null;
+        /// <summary>The maximum number of pending bytes from a client before it is disconnected.<br/>
+        /// Default: 4MB</summary>
         public int MaxPendingSize = 4_000_000;
     }
 }

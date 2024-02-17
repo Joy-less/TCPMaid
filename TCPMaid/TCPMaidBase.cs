@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Text;
 using System.Threading.Tasks;
 using System.Threading;
@@ -44,11 +43,11 @@ namespace TCPMaid {
                     // Wait for bytes from the network stream
                     await ReadBytesFromStreamAsync(Connection.Stream, PendingBytes, BaseOptions.BufferSize, BaseOptions.DisconnectTimeout);
 
-                    // Prevent high memory usage on server
+                    // Limit memory usage on server
                     if (BaseOptions is ServerOptions ServerOptions) {
                         // Calculate total bytes used in pending messages from client
                         int PendingSize = PendingBytes.Count + PendingMessages.Sum(PendingMessage => PendingMessage.Value.Bytes.Length);
-                        // Ensure total bytes under limit
+                        // Check if total exceeds limit
                         if (PendingSize > ServerOptions.MaxPendingSize) {
                             // Disconnect client for using too much memory
                             await Connection.DisconnectAsync(DisconnectReason.HighMemoryUsage);
@@ -345,13 +344,17 @@ namespace TCPMaid {
         }
     }
     public abstract class BaseOptions {
-        /// <summary>How many seconds of silence before a connection is dropped. Default: 10</summary>
+        /// <summary>How many seconds of silence before a connection is dropped.<br/>
+        /// Default: 10</summary>
         public double DisconnectTimeout = 10;
-        /// <summary>The size of the network buffer in bytes. Uses more memory, but speeds up transmission of larger messages. Default: 30kB</summary>
+        /// <summary>The size of the network buffer in bytes. Uses more memory, but speeds up transmission of larger messages.<br/>
+        /// Default: 30kB</summary>
         public int BufferSize = 30_000;
-        /// <summary>The maximum size of a packet in bytes before it will be broken up to avoid congestion. Default: 750kB</summary>
-        public int MaxPacketSize = 750_000;
-        /// <summary>How many seconds before sending another <see cref="PingRequest"/> to measure the connection's ping. Default: 0.5</summary>
+        /// <summary>The maximum size of a packet in bytes before it will be broken up to avoid congestion.<br/>
+        /// Default: 1MB</summary>
+        public int MaxPacketSize = 1_000_000;
+        /// <summary>How many seconds before sending another <see cref="PingRequest"/> to measure the connection's ping.<br/>
+        /// Default: 0.5</summary>
         public double PingRequestInterval = 0.5;
     }
     public static class DisconnectReason {
@@ -375,7 +378,7 @@ namespace TCPMaid {
         public const string HighMemoryUsage = "The client is using too much memory on the server.";
     }
     public abstract class Message {
-        private static readonly ReadOnlyDictionary<string, Type> MessageTypes = GetMessageTypes().AsReadOnly();
+        private static readonly IReadOnlyDictionary<string, Type> MessageTypes = GetMessageTypes();
         private const char NameDataSeparator = ' ';
 
         public static Type? GetMessageTypeFromName(string Name) {
