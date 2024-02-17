@@ -22,8 +22,6 @@ namespace TCPMaid {
         private readonly TcpListener Listener;
         private readonly ConcurrentDictionary<Connection, byte> Clients = new();
 
-        private X509Certificate2? Certificate;
-
         public TCPMaidServer(int port, ServerOptions? options = null) : base(options ?? new ServerOptions()) {
             // Initialise port field
             Port = port;
@@ -32,12 +30,10 @@ namespace TCPMaid {
             Listener.Server.NoDelay = true;
         }
         public void Start(X509Certificate2? certificate = null) {
-            // Initialise certificate field
-            Certificate = certificate;
             // Start listener
             Listener.Start();
             // Accept clients
-            _ = AcceptClientAsync();
+            _ = AcceptClientAsync(certificate);
             // Invoke start event
             OnStart?.Invoke();
             // Mark the server as activated
@@ -65,7 +61,7 @@ namespace TCPMaid {
         }
         public int ClientCount => Clients.Count;
 
-        private async Task AcceptClientAsync() {
+        private async Task AcceptClientAsync(X509Certificate2? Certificate) {
             // Wait for a client to connect
             TcpClient TcpClient;
             try {
@@ -75,7 +71,7 @@ namespace TCPMaid {
                 return;
             }
             finally {
-                _ = AcceptClientAsync();
+                _ = AcceptClientAsync(Certificate);
             }
 
             // Ensure server is active

@@ -6,8 +6,6 @@ using System.Net.Security;
 
 namespace TCPMaid {
     public class TCPMaidClient : TCPMaidBase {
-        public readonly bool UseSsl;
-
         public ClientOptions Options => (ClientOptions)BaseOptions;
         public bool Connected => Connection is not null && Connection.Connected;
         public Connection? Connection { get; private set; }
@@ -15,10 +13,9 @@ namespace TCPMaid {
         public event Action<Connection>? OnConnect;
         public event Action<Connection, bool, string>? OnDisconnect;
 
-        public TCPMaidClient(bool use_ssl = false, ClientOptions? options = null) : base(options ?? new ClientOptions()) {
-            UseSsl = use_ssl;
+        public TCPMaidClient(ClientOptions? options = null) : base(options ?? new ClientOptions()) {
         }
-        public async Task<bool> ConnectAsync(string ServerIpAddress, int ServerPort) {
+        public async Task<bool> ConnectAsync(string ServerIpAddress, int ServerPort, bool UseSsl = false) {
             // Return success if already connected
             if (Connected) return true;
 

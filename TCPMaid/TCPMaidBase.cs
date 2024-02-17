@@ -1,9 +1,10 @@
 ﻿using System;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Collections.Generic;
 using System.Text;
-using System.Threading.Tasks;
-using System.Threading;
 using System.Linq;
+using System.Diagnostics;
 using System.IO;
 using System.Buffers;
 using System.Net;
@@ -129,13 +130,13 @@ namespace TCPMaid {
                 // Wait until next ping
                 await Task.Delay(TimeSpan.FromSeconds(BaseOptions.PingRequestInterval));
                 // Start timer
-                double TimeOfPing = GetTimestamp();
+                Stopwatch Timer = Stopwatch.StartNew();
                 // Request ping response
                 await Connection.RequestAsync<PingResponse>(new PingRequest());
                 // Stop timer
-                double TimeOfPong = GetTimestamp();
+                Timer.Stop();
                 // Set ping
-                Connection.Ping = (TimeOfPong - TimeOfPing) / 2;
+                Connection.Ping = Timer.Elapsed.TotalSeconds / 2;
             }
         }
         private static async Task<int> ReadBytesFromStreamAsync(Stream Stream, List<byte> PendingBytes, int BufferSize, double TimeoutInSeconds) {
@@ -167,9 +168,6 @@ namespace TCPMaid {
                 CurrentIndex += Array.Length;
             }
             return MergedArray;
-        }
-        public static double GetTimestamp() {
-            return DateTimeOffset.UtcNow.Subtract(DateTimeOffset.UnixEpoch).TotalSeconds;
         }
     }
     public sealed class Connection {
