@@ -5,6 +5,8 @@ VisualStudioVersion = 17.8.34511.84
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TCPMaid", "TCPMaid\TCPMaid.csproj", "{E59C1BD3-F53A-4162-A5A6-B3A28AC4A9C7}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TCPMaid.Benchmark", "TCPMaid.Benchmark\TCPMaid.Benchmark.csproj", "{23A3F82A-B02B-4A36-AE1D-3FC99AFEE391}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,6 +17,10 @@ Global
 		{E59C1BD3-F53A-4162-A5A6-B3A28AC4A9C7}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{E59C1BD3-F53A-4162-A5A6-B3A28AC4A9C7}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{E59C1BD3-F53A-4162-A5A6-B3A28AC4A9C7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{23A3F82A-B02B-4A36-AE1D-3FC99AFEE391}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{23A3F82A-B02B-4A36-AE1D-3FC99AFEE391}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{23A3F82A-B02B-4A36-AE1D-3FC99AFEE391}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{23A3F82A-B02B-4A36-AE1D-3FC99AFEE391}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
