@@ -15,7 +15,7 @@ namespace TCPMaid {
 
         public TCPMaidClient(ClientOptions? options = null) : base(options ?? new ClientOptions()) {
         }
-        public async Task<bool> ConnectAsync(string ServerIpAddress, int ServerPort, bool UseSsl = false) {
+        public async Task<bool> ConnectAsync(string ServerHost, int ServerPort, bool Ssl = false) {
             // Return success if already connected
             if (Connected) return true;
 
@@ -24,7 +24,7 @@ namespace TCPMaid {
 
             // Try connect to server
             try {
-                await TcpClient.ConnectAsync(ServerIpAddress, ServerPort);
+                await TcpClient.ConnectAsync(ServerHost, ServerPort);
             }
             // Failed to connect
             catch (Exception) {
@@ -35,11 +35,11 @@ namespace TCPMaid {
             try {
                 NetworkStream NetworkStream = TcpClient.GetStream();
                 // SSL (encrypted)
-                if (UseSsl) {
+                if (Ssl) {
                     // Create SSL stream
                     SslStream SslStream = new(NetworkStream, false);
                     // Authenticate stream
-                    await SslStream.AuthenticateAsClientAsync(ServerIpAddress);
+                    await SslStream.AuthenticateAsClientAsync(ServerHost);
                     // Create encrypted connection
                     Connection = new Connection(this, TcpClient, (IPEndPoint)TcpClient.Client.RemoteEndPoint!, SslStream, NetworkStream);
                 }
