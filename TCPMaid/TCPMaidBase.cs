@@ -125,16 +125,16 @@ namespace TCPMaid {
                     await Connection.SendAsync(new PingResponse(PingRequest.RequestId));
                 }
             };
+            // Create timer
+            Stopwatch Timer = new();
             // Request pings
             while (Connection.Connected) {
                 // Wait until next ping
                 await Task.Delay(TimeSpan.FromSeconds(BaseOptions.PingRequestInterval));
-                // Start timer
-                Stopwatch Timer = Stopwatch.StartNew();
+                // Restart timer
+                Timer.Restart();
                 // Request ping response
                 await Connection.RequestAsync<PingResponse>(new PingRequest());
-                // Stop timer
-                Timer.Stop();
                 // Set ping
                 Connection.Ping = Timer.Elapsed.TotalSeconds / 2;
             }
@@ -353,8 +353,8 @@ namespace TCPMaid {
         /// Default: 1MB</summary>
         public int MaxPacketSize = 1_000_000;
         /// <summary>How many seconds before sending another <see cref="PingRequest"/> to measure the connection's ping.<br/>
-        /// Default: 0.5</summary>
-        public double PingRequestInterval = 0.5;
+        /// Default: 1</summary>
+        public double PingRequestInterval = 1;
     }
     public static class DisconnectReason {
         /// <summary>The disconnect reason is unknown.</summary>
