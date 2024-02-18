@@ -274,7 +274,7 @@ namespace TCPMaid {
             // Send disconnect message
             await SendAsync(new DisconnectMessage(Reason));
             // Close client
-            Client.Client?.Close();
+            Client.Close();
             // Invoke on disconnect
             OnDisconnect?.Invoke(false, Reason);
         }
@@ -283,7 +283,7 @@ namespace TCPMaid {
             if (!Connected) return;
             Connected = false;
             // Close client
-            Client.Client?.Close();
+            Client.Close();
             // Invoke on disconnect
             OnDisconnect?.Invoke(true, Reason);
         }
@@ -375,7 +375,7 @@ namespace TCPMaid {
     }
     public abstract class Message {
         private static readonly IReadOnlyDictionary<string, Type> MessageTypes = GetMessageTypes();
-        private const char NameDataSeparator = ' ';
+        private const char NameDataSeparator = ':';
 
         public static Type? GetMessageTypeFromName(string Name) {
             MessageTypes.TryGetValue(Name, out Type? Type);
