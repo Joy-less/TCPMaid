@@ -249,25 +249,23 @@ namespace TCPMaid {
         }
         public async Task<TMessage> WaitForMessageAsync<TMessage>(Predicate<TMessage>? Where = null) where TMessage : Message {
             // Create return variable and receive signal 
-            TMessage? ReturnMessage = null;
-            SemaphoreSlim ReceiveSignal = new(0, 1);
+            TaskCompletionSource<TMessage> CompletionSource = new();
             // Filter received messages
             void Filter(Message Message) {
                 // Check if message is of the given type and meets the predicate
                 if (Message is TMessage MessageOfT && (Where is null || Where(MessageOfT))) {
                     // Set return variable and signal
-                    ReturnMessage = MessageOfT;
-                    ReceiveSignal.Release();
+                    CompletionSource.TrySetResult(MessageOfT);
                 }
             }
             // Listen for messages
             OnReceive += Filter;
             // Await a matching message
-            await ReceiveSignal.WaitAsync();
+            TMessage ReturnMessage = await CompletionSource.Task;
             // Stop listening for messages
             OnReceive -= Filter;
             // Return the matched message
-            return ReturnMessage!;
+            return ReturnMessage;
         }
         public async Task DisconnectAsync(string Reason = DisconnectReason.NoReasonGiven) {
             // Mark as disconnected
