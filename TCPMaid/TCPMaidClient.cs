@@ -16,8 +16,8 @@ namespace TCPMaid {
         public TCPMaidClient(ClientOptions? options = null) : base(options ?? new ClientOptions()) {
         }
         public async Task<bool> ConnectAsync(string ServerHost, int ServerPort, bool Ssl = false) {
-            // Return success if already connected
-            if (Connected) return true;
+            // Return failure if already connected
+            if (Connected) return false;
 
             // Create TcpClient
             TcpClient TcpClient = new() { NoDelay = true };
@@ -32,6 +32,7 @@ namespace TCPMaid {
             }
 
             // Create connection (SSL or not)
+            Connection Client;
             try {
                 NetworkStream NetworkStream = TcpClient.GetStream();
                 // SSL (encrypted)
@@ -41,12 +42,12 @@ namespace TCPMaid {
                     // Authenticate stream
                     await SslStream.AuthenticateAsClientAsync(ServerHost);
                     // Create encrypted connection
-                    Connection = new Connection(this, TcpClient, (IPEndPoint)TcpClient.Client.RemoteEndPoint!, SslStream, NetworkStream);
+                    Connection = Client = new Connection(this, TcpClient, (IPEndPoint)TcpClient.Client.RemoteEndPoint!, SslStream, NetworkStream);
                 }
                 // Plain
                 else {
                     // Create plain connection
-                    Connection = new Connection(this, TcpClient, (IPEndPoint)TcpClient.Client.RemoteEndPoint!, NetworkStream, NetworkStream);
+                    Connection = Client = new Connection(this, TcpClient, (IPEndPoint)TcpClient.Client.RemoteEndPoint!, NetworkStream, NetworkStream);
                 }
             }
             // Failed to create connection
@@ -55,16 +56,18 @@ namespace TCPMaid {
             }
 
             // Listen to disconnect event
-            Connection.OnDisconnect += (ByRemote, Reason) => {
+            Client.OnDisconnect += (ByRemote, Reason) => {
+                // Remove connection
+                Connection = null;
                 // Invoke disconnect event
-                OnDisconnect?.Invoke(Connection, ByRemote, Reason);
+                OnDisconnect?.Invoke(Client, ByRemote, Reason);
             };
             // Listen to server
-            _ = ListenForMessages(Connection);
+            _ = ListenForMessages(Client);
             // Start measuring ping
-            _ = StartPingPong(Connection);
+            _ = StartPingPong(Client);
             // Invoke connect event
-            OnConnect?.Invoke(Connection);
+            OnConnect?.Invoke(Client);
             // Return success
             return true;
         }

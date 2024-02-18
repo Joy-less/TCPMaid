@@ -185,7 +185,7 @@ namespace TCPMaid {
             return Fragments;
         }
     }
-    public sealed class Connection {
+    public sealed class Connection : IDisposable {
         /// <summary>The TCPMaid instance this connection belongs to.</summary>
         public readonly TCPMaidBase TCPMaid;
         /// <summary>On the server, this is the remote client. On the client, this is the local client.</summary>
@@ -283,24 +283,27 @@ namespace TCPMaid {
             return ReturnMessage;
         }
         public async Task DisconnectAsync(string Reason = DisconnectReason.NoReasonGiven) {
-            // Mark as disconnected
-            if (!Connected) return;
-            Connected = false;
             // Send disconnect message
             await SendAsync(new DisconnectMessage(Reason));
-            // Close client
-            Client.Close();
+            // Dispose
+            Dispose();
             // Invoke on disconnect
             OnDisconnect?.Invoke(false, Reason);
         }
         internal void DisconnectByRequest(string Reason = DisconnectReason.NoReasonGiven) {
+            // Dispose
+            Dispose();
+            // Invoke on disconnect
+            OnDisconnect?.Invoke(true, Reason);
+        }
+        public void Dispose() {
             // Mark as disconnected
             if (!Connected) return;
             Connected = false;
             // Close client
             Client.Close();
-            // Invoke on disconnect
-            OnDisconnect?.Invoke(true, Reason);
+            // Dispose semaphore
+            NetworkSemaphore.Dispose();
         }
         internal void InvokeOnReceive(Message Message) {
             try {
