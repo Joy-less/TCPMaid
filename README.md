@@ -50,7 +50,7 @@ public static async void Client() {
     await Client.ConnectAsync("localhost", 5000);
 
     // Say hello to server
-    await Connection.SendAsync(new ExampleMessage("hello server!"));
+    await Client.Connection!.SendAsync(new ExampleMessage("hello server!"));
 }
 ```
 ```cs
