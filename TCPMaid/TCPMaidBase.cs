@@ -218,13 +218,13 @@ namespace TCPMaid {
 
             // Write bytes to message stream
             try {
-                // Send each packet
-                for (int i = 0; i < Packets.Length; i++) {
+                // Send first packet
+                await SendRawAsync(Packets[0]);
+                // Send extra packets
+                for (int i = 1; i < Packets.Length; i++) {
                     // Await send packet message
-                    if (i != 0) {
-                        await WaitForMessageAsync<SendNextPacketMessage>(Message => Message.MessageId == MessageId);
-                    }
-                    // Send one packet
+                    await WaitForMessageAsync<SendNextPacketMessage>(Message => Message.MessageId == MessageId);
+                    // Send extra packet
                     await SendRawAsync(Packets[i]);
                 }
                 // Send success!
