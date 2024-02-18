@@ -169,6 +169,21 @@ namespace TCPMaid {
             }
             return MergedArray;
         }
+        public static T[][] Fragment<T>(T[] Array, int MaxFragmentSize) {
+            // Create fragments array to store all fragments
+            int FragmentsCount = (Array.Length + MaxFragmentSize - 1) / MaxFragmentSize;
+            T[][] Fragments = new T[FragmentsCount][];
+            // Loop until all fragments processed
+            for (int i = 0; i < Fragments.Length; i++) {
+                // Get current array index
+                int ArrayIndex = i * MaxFragmentSize;
+                // Calculate size of current fragment
+                int FragmentSize = Math.Min(MaxFragmentSize, Array.Length - ArrayIndex);
+                // Copy fragment
+                Fragments[i] = Array[ArrayIndex..(ArrayIndex + FragmentSize)];
+            }
+            return Fragments;
+        }
     }
     public sealed class Connection {
         /// <summary>The TCPMaid instance this connection belongs to.</summary>
@@ -207,7 +222,7 @@ namespace TCPMaid {
             // Get bytes from message
             byte[] Bytes = Message.ToBytes();
             // Split bytes into smaller fragments
-            byte[][] ByteFragments = FragmentArray(Bytes, TCPMaid.BaseOptions.MaxPacketSize);
+            byte[][] ByteFragments = Fragment(Bytes, TCPMaid.BaseOptions.MaxPacketSize);
 
             // Create packets from byte fragments
             byte[][] Packets = new byte[ByteFragments.Length][];
@@ -322,21 +337,6 @@ namespace TCPMaid {
             byte[] MessageIdBytes = BitConverter.GetBytes(MessageId);
             byte[] LengthBytes = BitConverter.GetBytes(MessageIdSize + Bytes.Length);
             return Concat(LengthBytes, MessageIdBytes, Bytes);
-        }
-        private static T[][] FragmentArray<T>(T[] Array, int MaxFragmentSize) {
-            // Create fragments array to store all fragments
-            int FragmentsCount = (Array.Length + MaxFragmentSize - 1) / MaxFragmentSize;
-            T[][] Fragments = new T[FragmentsCount][];
-            // Loop until all fragments processed
-            for (int i = 0; i < Fragments.Length; i++) {
-                // Get current array index
-                int ArrayIndex = i * MaxFragmentSize;
-                // Calculate size of current fragment
-                int FragmentSize = Math.Min(MaxFragmentSize, Array.Length - ArrayIndex);
-                // Copy fragment
-                Fragments[i] = Array[ArrayIndex..(ArrayIndex + FragmentSize)];
-            }
-            return Fragments;
         }
     }
     public abstract class BaseOptions {

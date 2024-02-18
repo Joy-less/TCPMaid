@@ -5,7 +5,7 @@ using System.Net.Sockets;
 using System.Net.Security;
 
 namespace TCPMaid {
-    public class TCPMaidClient : TCPMaidBase {
+    public sealed class TCPMaidClient : TCPMaidBase {
         public ClientOptions Options => (ClientOptions)BaseOptions;
         public bool Connected => Connection is not null && Connection.Connected;
         public Connection? Connection { get; private set; }
