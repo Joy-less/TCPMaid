@@ -30,7 +30,7 @@ namespace TCPMaid {
             // Listen for disconnect messages
             Connection.OnReceive += (Message Message) => {
                 if (Message is DisconnectMessage DisconnectMessage) {
-                    Connection.DisconnectByRequest(DisconnectMessage.Reason);
+                    Connection.DisconnectSilently(DisconnectMessage.Reason, ByRemote: true);
                 }
             };
             // Listen for incoming packets
@@ -245,9 +245,9 @@ namespace TCPMaid {
                 // Send success!
                 return true;
             }
+            // Failed to send message
             catch (Exception) {
-                // Send failure
-                await DisconnectAsync(DisconnectReason.Unknown);
+                DisconnectSilently(DisconnectReason.Error);
                 return false;
             }
         }
@@ -290,11 +290,11 @@ namespace TCPMaid {
             // Invoke on disconnect
             OnDisconnect?.Invoke(false, Reason);
         }
-        internal void DisconnectByRequest(string Reason = DisconnectReason.NoReasonGiven) {
+        internal void DisconnectSilently(string Reason = DisconnectReason.NoReasonGiven, bool ByRemote = false) {
             // Dispose
             Dispose();
             // Invoke on disconnect
-            OnDisconnect?.Invoke(true, Reason);
+            OnDisconnect?.Invoke(ByRemote, Reason);
         }
         public void Dispose() {
             // Mark as disconnected
