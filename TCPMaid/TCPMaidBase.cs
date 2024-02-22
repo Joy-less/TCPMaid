@@ -72,18 +72,22 @@ namespace TCPMaid {
                         PendingBytes.RemoveRange(0, PacketLengthSize + PacketLength);
 
                         // Get message ID from packet data
-                        ulong MessageId = BitConverter.ToUInt64(PacketData, 0);
+                        ulong MessageId = BitConverter.ToUInt64(PacketData);
 
-                        // Existing message
+                        // Pending message
                         if (PendingMessages.TryGetValue(MessageId, out (int Length, byte[] Bytes) PendingMessage)) {
-                            // Get partial message data
+                            // Add new message data
                             PendingMessage.Bytes = Concat(PendingMessage.Bytes, PacketData[MessageIdSize..]);
+                            // Remove pending message if complete
+                            if (PendingMessage.Bytes.Length >= PendingMessage.Length) {
+                                PendingMessages.Remove(MessageId);
+                            }
                         }
                         // New message
                         else {
                             // Get expected message length
                             PendingMessage.Length = BitConverter.ToInt32(PacketData, MessageIdSize);
-                            // Get partial message data
+                            // Add new message data
                             PendingMessage.Bytes = PacketData[(MessageIdSize + MessageLengthSize)..];
                         }
 
@@ -96,9 +100,7 @@ namespace TCPMaid {
                             break;
                         }
 
-                        // Remove pending message
-                        PendingMessages.Remove(MessageId);
-                        // Get full message
+                        // Construct message
                         Message? Message = Message.FromBytes(PendingMessage.Bytes);
                         // Handle message
                         if (Message is not null) {
@@ -222,7 +224,7 @@ namespace TCPMaid {
             // Get bytes from message
             byte[] Bytes = Message.ToBytes();
             // Split bytes into smaller fragments
-            byte[][] ByteFragments = Fragment(Bytes, TCPMaid.BaseOptions.MaxPacketSize);
+            byte[][] ByteFragments = Fragment(Bytes, TCPMaid.BaseOptions.MessageFragmentSize);
 
             // Create packets from byte fragments
             byte[][] Packets = new byte[ByteFragments.Length][];
@@ -314,7 +316,7 @@ namespace TCPMaid {
                 OnReceive?.Invoke(Message);
             }
             catch (Exception Ex) {
-                // Get error message (message hidden for server errors)
+                // Get error info (message hidden for server errors)
                 string Error = TCPMaid is TCPMaidClient
                     ? $"{Ex.GetType().Name}: {Ex.Message}"
                     : Ex.GetType().Name;
@@ -353,10 +355,10 @@ namespace TCPMaid {
         /// <summary>The size of the network buffer in bytes. Uses more memory, but speeds up transmission of larger messages.<br/>
         /// Default: 30kB</summary>
         public int BufferSize = 30_000;
-        /// <summary>The maximum size of a packet in bytes before it will be broken up to avoid congestion.<br/>
+        /// <summary>The maximum size of a message in bytes before it will be broken up to avoid congestion.<br/>
         /// Default: 1MB</summary>
-        public int MaxPacketSize = 1_000_000;
-        /// <summary>How many seconds before sending another <see cref="PingRequest"/> to measure the connection's ping.<br/>
+        public int MessageFragmentSize = 1_000_000;
+        /// <summary>How many seconds before sending another <see cref="PingRequest"/> to measure the connection's latency and prevent a timeout.<br/>
         /// Default: 1</summary>
         public double PingRequestInterval = 1;
     }
@@ -365,9 +367,11 @@ namespace TCPMaid {
         public const string Unknown = "Unknown.";
         /// <summary>No disconnect reason was given.</summary>
         public const string NoReasonGiven = "No reason given.";
-        /// <summary>The client/server has not sent data for too long (usually due to a bad internet connection).</summary>
+        /// <summary>There was an error.</summary>
+        public const string Error = "There was an error.";
+        /// <summary>The client or server has not sent data for too long (usually due to a bad internet connection).</summary>
         public const string Timeout = "Connection timed out.";
-        /// <summary>The server has too many clients.</summary>
+        /// <summary>The server has reached the maximum number of clients.</summary>
         public const string TooManyClients = "The server has too many clients.";
         /// <summary>The server has kicked the client.</summary>
         public const string Kicked = "Kicked by the server.";
@@ -375,8 +379,6 @@ namespace TCPMaid {
         public const string ClientShutdown = "The client is closing.";
         /// <summary>The server is shutting down.</summary>
         public const string ServerShutdown = "The server is shutting down.";
-        /// <summary>There was an error.</summary>
-        public const string Error = "There was an error.";
         /// <summary>The client is using too much memory on the server.</summary>
         public const string HighMemoryUsage = "The client is using too much memory on the server.";
     }
