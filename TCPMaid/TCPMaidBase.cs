@@ -283,6 +283,8 @@ namespace TCPMaid {
             return ReturnMessage;
         }
         public async Task DisconnectAsync(string Reason = DisconnectReason.NoReasonGiven) {
+            // Debounce
+            if (!Connected) return;
             // Send disconnect message
             await SendAsync(new DisconnectMessage(Reason));
             // Dispose
@@ -291,6 +293,8 @@ namespace TCPMaid {
             OnDisconnect?.Invoke(false, Reason);
         }
         internal void DisconnectSilently(string Reason = DisconnectReason.NoReasonGiven, bool ByRemote = false) {
+            // Debounce
+            if (!Connected) return;
             // Dispose
             Dispose();
             // Invoke on disconnect
