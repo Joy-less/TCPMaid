@@ -93,8 +93,6 @@ namespace TCPMaid {
             try {
                 // Get the network stream
                 NetworkStream NetworkStream = TcpClient.GetStream();
-                // Get the remote end point
-                IPEndPoint RemoteEndPoint = (IPEndPoint)TcpClient.Client.RemoteEndPoint!;
 
                 // SSL (encrypted)
                 if (Certificate is not null) {
@@ -103,12 +101,12 @@ namespace TCPMaid {
                     // Authenticate stream
                     await SslStream.AuthenticateAsServerAsync(Certificate, clientCertificateRequired: false, checkCertificateRevocation: true);
                     // Create encrypted connection
-                    Client = new Connection(this, TcpClient, RemoteEndPoint, SslStream);
+                    Client = new Connection(this, TcpClient, SslStream);
                 }
                 // Plain
                 else {
                     // Create plain connection
-                    Client = new Connection(this, TcpClient, RemoteEndPoint, NetworkStream);
+                    Client = new Connection(this, TcpClient, NetworkStream);
                 }
             }
             // Failed to create connection

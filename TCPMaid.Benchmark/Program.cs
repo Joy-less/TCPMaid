@@ -16,8 +16,8 @@
                 while (true) {
                     const double BroadcastsPerSecond = 10;
                     await Task.Delay(TimeSpan.FromSeconds(1 / BroadcastsPerSecond));
-                    await Server.BroadcastAsync(new BlankMessage());
-                    await Server.BroadcastAsync(new BlankMessage(), Protocol.UDP);
+                    await Server.BroadcastAsync(new BlankMessageTcp());
+                    await Server.BroadcastAsync(new BlankMessageUdp(), Protocol.UDP);
                 }
             });
 
@@ -27,9 +27,13 @@
                 Client.OnConnect += (Connection) => {
                     Console.WriteLine("Connected!");
                 };
+                Client.OnReceive += (Message) => {
+                    // Console.WriteLine(Message.GetType().Name);
+                };
                 Client.ConnectAsync("127.0.0.1", 12345).Wait();
             }
         }
-        class BlankMessage : Message { }
+        class BlankMessageTcp : Message { }
+        class BlankMessageUdp : Message { }
     }
 }

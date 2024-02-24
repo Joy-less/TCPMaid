@@ -36,8 +36,6 @@ namespace TCPMaid {
             try {
                 // Get the network stream
                 NetworkStream NetworkStream = TcpClient.GetStream();
-                // Get the remote end point
-                IPEndPoint RemoteEndPoint = (IPEndPoint)TcpClient.Client.RemoteEndPoint!;
 
                 // SSL (encrypted)
                 if (Ssl) {
@@ -46,12 +44,12 @@ namespace TCPMaid {
                     // Authenticate stream
                     await SslStream.AuthenticateAsClientAsync(ServerHost);
                     // Create encrypted connection
-                    Server = new Connection(this, TcpClient, RemoteEndPoint, SslStream);
+                    Server = new Connection(this, TcpClient, SslStream);
                 }
                 // Plain
                 else {
                     // Create plain connection
-                    Server = new Connection(this, TcpClient, RemoteEndPoint, NetworkStream);
+                    Server = new Connection(this, TcpClient, NetworkStream);
                 }
             }
             // Failed to create connection

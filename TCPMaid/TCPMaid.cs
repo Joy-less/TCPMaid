@@ -10,6 +10,7 @@ using System.Buffers;
 using System.Net;
 using System.Net.Sockets;
 using System.Net.Security;
+using System.Security.Cryptography;
 using Newtonsoft.Json;
 using static TCPMaid.TCPMaid;
 
@@ -102,8 +103,13 @@ namespace TCPMaid {
 
                         // Construct message
                         Message? Message = Message.FromBytes(PendingMessage.Bytes);
+                        // Set shared secret
+                        if (Message is SharedSecretMessage SharedSecretMessage) {
+                            Connection.SharedSecret ??= SharedSecretMessage.Secret;
+                            Connection.OnSharedSecret.TrySetResult();
+                        }
                         // Handle message
-                        if (Message is not null) {
+                        else if (Message is not null) {
                             Connection.InvokeOnReceive(Message);
                         }
                     }
@@ -127,9 +133,25 @@ namespace TCPMaid {
                 while (Connection.Connected) {
                     // Receive packet
                     UdpReceiveResult Packet = await Connection.UdpClient.ReceiveAsync();
+                    byte[] Bytes = Packet.Buffer;
+
+                    // Ensure packet is from connection
+                    if (!Packet.RemoteEndPoint.Equals(Connection.RemoteEndPoint)) {
+                        continue;
+                    }
+
+                    // Encrypted message
+                    if (Connection.Encrypted) {
+                        // Get shared secret
+                        while (Connection.SharedSecret is null) {
+                            await Connection.OnSharedSecret.Task;
+                        }
+                        // Decrypt packet
+                        Bytes = await DecryptAsync(Bytes, Connection.SharedSecret);
+                    }
 
                     // Construct message
-                    Message? Message = Message.FromBytes(Packet.Buffer);
+                    Message? Message = Message.FromBytes(Bytes);
                     // Handle message
                     if (Message is not null) {
                         Connection.InvokeOnReceive(Message);
@@ -213,35 +235,82 @@ namespace TCPMaid {
             }
             return Fragments;
         }
+        public static async Task<byte[]> EncryptAsync(byte[] Plain, byte[] Key) {
+            // Create AES
+            using Aes Aes = Aes.Create();
+            Aes.Key = Key;
+
+            // Create crypto writer
+            using MemoryStream MemoryStream = new();
+            using CryptoStream CryptoStream = new(MemoryStream, Aes.CreateEncryptor(), CryptoStreamMode.Write);
+            // Encrypt plain
+            await CryptoStream.WriteAsync(Plain);
+            await CryptoStream.FlushFinalBlockAsync();
+
+            // Join IV and encrypted data
+            return Concat(Aes.IV, MemoryStream.ToArray());
+        }
+        public static async Task<byte[]> DecryptAsync(byte[] Encrypted, byte[] Key) {
+            // Create AES
+            using Aes Aes = Aes.Create();
+            Aes.Key = Key;
+
+            // Calculate IV size
+            int IVSize = Aes.BlockSize / 8;
+
+            // Separate IV and encrypted data
+            byte[] IV = Encrypted[..IVSize];
+            byte[] EncryptedData = Encrypted[IVSize..];
+
+            // Set IV
+            Aes.IV = IV;
+
+            // Create crypto writer
+            using MemoryStream MemoryStream = new();
+            using CryptoStream CryptoStream = new(MemoryStream, Aes.CreateDecryptor(), CryptoStreamMode.Write);
+            // Decrypt encrypted data
+            await CryptoStream.WriteAsync(EncryptedData);
+            await CryptoStream.FlushFinalBlockAsync();
+
+            // Get plain data
+            return MemoryStream.ToArray();
+        }
     }
     public sealed class Connection : IDisposable {
         /// <summary>The TCPMaid instance this connection belongs to.</summary>
         public readonly TCPMaid TCPMaid;
         /// <summary>On the server, this is the remote client. On the client, this is the local client.</summary>
         public readonly TcpClient Client;
-        /// <summary>The IP address and port of the remote connection.</summary>
-        public readonly IPEndPoint EndPoint;
-        /// <summary>If the connection is encrypted, this is an <see cref="SslStream"/> that wraps around the <see cref="NetworkStream"/>. Otherwise, it's the <see cref="NetworkStream"/>.</summary>
+        /// <summary>If the connection is encrypted, this is an <see cref="SslStream"/> that wraps the <see cref="NetworkStream"/>. Otherwise, it's the <see cref="NetworkStream"/>.</summary>
         public readonly Stream Stream;
+        /// <summary>The IP address and port of the remote connection.</summary>
+        public readonly IPEndPoint RemoteEndPoint;
+        /// <summary>The IP address and port of the local connection.</summary>
+        public readonly IPEndPoint LocalEndPoint;
         /// <summary>The local UDP client.</summary>
         public readonly UdpClient UdpClient;
 
         public bool Connected { get; private set; } = true;
         public double Ping { get; internal set; }
+        public bool Encrypted => Stream is SslStream;
 
         public event Action<bool, string>? OnDisconnect;
         public event Action<Message>? OnReceive;
 
-        private readonly SemaphoreSlim NetworkSemaphore = new(1, 1);
+        internal byte[]? SharedSecret;
+        internal readonly TaskCompletionSource OnSharedSecret = new();
 
+        private readonly SemaphoreSlim NetworkSemaphore = new(1, 1);
         private static ulong LastMessageId;
 
-        internal Connection(TCPMaid tcp_maid, TcpClient client, IPEndPoint end_point, Stream stream) {
+        internal Connection(TCPMaid tcp_maid, TcpClient client, Stream stream) {
             TCPMaid = tcp_maid;
             Client = client;
-            EndPoint = end_point;
             Stream = stream;
+            RemoteEndPoint = (IPEndPoint)Client.Client.RemoteEndPoint!;
+            LocalEndPoint = (IPEndPoint)Client.Client.LocalEndPoint!;
             UdpClient = SetupUdpClient();
+            SetupSharedSecret();
         }
 
         public async Task<bool> SendAsync(Message Message, Protocol Protocol = Protocol.TCP) {
@@ -253,30 +322,29 @@ namespace TCPMaid {
         }
         public async Task<TResponse?> RequestAsync<TResponse>(Request Request, Predicate<TResponse>? Filter = null) where TResponse : Response {
             // Send request
-            if (await SendAsync(Request)) {
-                // Return response
-                return await WaitForMessageAsync<TResponse>(Response => Response.RequestId == Request.RequestId && (Filter is null || Filter(Response)));
-            }
+            bool Success = await SendAsync(Request);
             // Send failure
-            else {
+            if (!Success) {
                 return null;
             }
+            // Return response
+            return await WaitForMessageAsync<TResponse>(Response => Response.RequestId == Request.RequestId && (Filter is null || Filter(Response)));
         }
         public async Task<TMessage> WaitForMessageAsync<TMessage>(Predicate<TMessage>? Where = null) where TMessage : Message {
             // Create return variable and receive signal 
-            TaskCompletionSource<TMessage> CompletionSource = new();
+            TaskCompletionSource<TMessage> OnComplete = new();
             // Filter received messages
             void Filter(Message Message) {
                 // Check if message is of the given type and meets the predicate
                 if (Message is TMessage MessageOfT && (Where is null || Where(MessageOfT))) {
                     // Set return variable and signal
-                    CompletionSource.TrySetResult(MessageOfT);
+                    OnComplete.TrySetResult(MessageOfT);
                 }
             }
             // Listen for messages
             OnReceive += Filter;
             // Await a matching message
-            TMessage ReturnMessage = await CompletionSource.Task;
+            TMessage ReturnMessage = await OnComplete.Task;
             // Stop listening for messages
             OnReceive -= Filter;
             // Return the matched message
@@ -289,7 +357,7 @@ namespace TCPMaid {
             await SendAsync(new DisconnectMessage(Reason));
             // Dispose
             Dispose();
-            // Invoke on disconnect
+            // Invoke disconnect event
             OnDisconnect?.Invoke(false, Reason);
         }
         internal void DisconnectSilently(string Reason = DisconnectReason.NoReasonGiven, bool ByRemote = false) {
@@ -297,7 +365,7 @@ namespace TCPMaid {
             if (!Connected) return;
             // Dispose
             Dispose();
-            // Invoke on disconnect
+            // Invoke disconnect event
             OnDisconnect?.Invoke(ByRemote, Reason);
         }
         public void Dispose() {
@@ -313,6 +381,7 @@ namespace TCPMaid {
         }
         internal void InvokeOnReceive(Message Message) {
             try {
+                // Invoke receive event
                 OnReceive?.Invoke(Message);
             }
             catch (Exception Ex) {
@@ -371,6 +440,16 @@ namespace TCPMaid {
             // Get bytes from message
             byte[] Bytes = Message.ToBytes();
 
+            // Encrypted message
+            if (Encrypted) {
+                // Get shared secret
+                while (SharedSecret is null) {
+                    await OnSharedSecret.Task;
+                }
+                // Encrypt bytes
+                Bytes = await EncryptAsync(Bytes, SharedSecret);
+            }
+
             // Send bytes to remote client
             try {
                 // Send bytes
@@ -396,9 +475,20 @@ namespace TCPMaid {
             // Bind UDP client to local TCP port
             UdpClient.Client.Bind(new IPEndPoint(IPAddress.IPv6Any, LocalEndPoint.Port));
             // Connect UDP client to remote end point
-            UdpClient.Connect(EndPoint);
+            UdpClient.Connect(RemoteEndPoint);
             // Return UDP client
             return UdpClient;
+        }
+        private void SetupSharedSecret() {
+            if (Encrypted && TCPMaid is TCPMaidServer) {
+                // Generate shared secret
+                SharedSecretMessage SharedSecretMessage = new();
+                // Set shared secret
+                SharedSecret ??= SharedSecretMessage.Secret;
+                OnSharedSecret.TrySetResult();
+                // Send shared secret
+                _ = SendAsync(SharedSecretMessage);
+            }
         }
         private static byte[] CreateFirstPacket(ulong MessageId, int MessageLength, byte[] Bytes) {
             byte[] MessageIdBytes = BitConverter.GetBytes(MessageId);
@@ -453,7 +543,6 @@ namespace TCPMaid {
         TCP,
         /// <summary>
         /// Prioritises speed at the cost of dropped or unordered messages.<br/>
-        /// <b>Messages are not encrypted, even if SSL is enabled.</b>
         /// </summary>
         UDP,
     }
@@ -503,22 +592,29 @@ namespace TCPMaid {
             RequestId = request_id;
         }
     }
+    public sealed class SharedSecretMessage : Message {
+        [JsonProperty] public readonly byte[] Secret = RandomNumberGenerator.GetBytes(256 / 8);
+        [JsonConstructor] internal SharedSecretMessage() {
+        }
+    }
     public sealed class SendNextPacketMessage : Message {
         [JsonProperty] public readonly ulong MessageId;
-        public SendNextPacketMessage(ulong message_id) {
+        [JsonConstructor] internal SendNextPacketMessage(ulong message_id) {
             MessageId = message_id;
         }
     }
     public sealed class DisconnectMessage : Message {
         [JsonProperty] public readonly string Reason;
-        public DisconnectMessage(string reason) {
+        [JsonConstructor] internal DisconnectMessage(string reason) {
             Reason = reason;
         }
     }
     public sealed class PingRequest : Request {
+        [JsonConstructor] internal PingRequest() {
+        }
     }
     public sealed class PingResponse : Response {
-        public PingResponse(ulong request_id) : base(request_id) {
+        [JsonConstructor] internal PingResponse(ulong request_id) : base(request_id) {
         }
     }
 }
