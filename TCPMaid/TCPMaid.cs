@@ -249,11 +249,84 @@ namespace TCPMaid {
         }
 
         public async Task<bool> SendAsync(Message Message, Protocol Protocol = Protocol.TCP) {
-            return await (Protocol switch {
-                Protocol.TCP => SendTcpAsync(Message),
-                Protocol.UDP => SendUdpAsync(Message),
+            return Protocol switch {
+                Protocol.TCP => await SendTcpAsync(Message),
+                Protocol.UDP => await SendUdpAsync(Message),
                 _ => throw new NotSupportedException()
-            });
+            };
+        }
+        public async Task<TResponse?> RequestAsync<TResponse>(Request Request, Predicate<TResponse>? Filter = null) where TResponse : Response {
+            // Send request
+            if (await SendAsync(Request)) {
+                // Return response
+                return await WaitForMessageAsync<TResponse>(Response => Response.RequestId == Request.RequestId && (Filter is null || Filter(Response)));
+            }
+            // Send failure
+            else {
+                return null;
+            }
+        }
+        public async Task<TMessage> WaitForMessageAsync<TMessage>(Predicate<TMessage>? Where = null) where TMessage : Message {
+            // Create return variable and receive signal 
+            TaskCompletionSource<TMessage> CompletionSource = new();
+            // Filter received messages
+            void Filter(Message Message) {
+                // Check if message is of the given type and meets the predicate
+                if (Message is TMessage MessageOfT && (Where is null || Where(MessageOfT))) {
+                    // Set return variable and signal
+                    CompletionSource.TrySetResult(MessageOfT);
+                }
+            }
+            // Listen for messages
+            OnReceive += Filter;
+            // Await a matching message
+            TMessage ReturnMessage = await CompletionSource.Task;
+            // Stop listening for messages
+            OnReceive -= Filter;
+            // Return the matched message
+            return ReturnMessage;
+        }
+        public async Task DisconnectAsync(string Reason = DisconnectReason.NoReasonGiven) {
+            // Debounce
+            if (!Connected) return;
+            // Send disconnect message
+            await SendAsync(new DisconnectMessage(Reason));
+            // Dispose
+            Dispose();
+            // Invoke on disconnect
+            OnDisconnect?.Invoke(false, Reason);
+        }
+        internal void DisconnectSilently(string Reason = DisconnectReason.NoReasonGiven, bool ByRemote = false) {
+            // Debounce
+            if (!Connected) return;
+            // Dispose
+            Dispose();
+            // Invoke on disconnect
+            OnDisconnect?.Invoke(ByRemote, Reason);
+        }
+        public void Dispose() {
+            // Mark as disconnected
+            if (!Connected) return;
+            Connected = false;
+            // Close client
+            Client.Close();
+            // Dispose semaphore
+            NetworkSemaphore.Dispose();
+            // Close UDP client
+            UdpClient.Close();
+        }
+        internal void InvokeOnReceive(Message Message) {
+            try {
+                OnReceive?.Invoke(Message);
+            }
+            catch (Exception Ex) {
+                // Get error info (message hidden for server errors)
+                string Error = TCPMaid is TCPMaidClient
+                    ? $"{Ex.GetType().Name}: {Ex.Message}"
+                    : Ex.GetType().Name;
+                // Disconnect on error
+                _ = DisconnectAsync($"{DisconnectReason.Error} ({Error})");
+            }
         }
         private async Task<bool> SendTcpAsync(Message Message) {
             // Generate message ID
@@ -313,79 +386,6 @@ namespace TCPMaid {
             catch (Exception) {
                 DisconnectSilently(DisconnectReason.Error);
                 return false;
-            }
-        }
-        public async Task<TResponse?> RequestAsync<TResponse>(Request Request, Predicate<TResponse>? Filter = null) where TResponse : Response {
-            // Send request
-            if (await SendTcpAsync(Request)) {
-                // Return response
-                return await WaitForMessageAsync<TResponse>(Response => Response.RequestId == Request.RequestId && (Filter is null || Filter(Response)));
-            }
-            // Send failure
-            else {
-                return null;
-            }
-        }
-        public async Task<TMessage> WaitForMessageAsync<TMessage>(Predicate<TMessage>? Where = null) where TMessage : Message {
-            // Create return variable and receive signal 
-            TaskCompletionSource<TMessage> CompletionSource = new();
-            // Filter received messages
-            void Filter(Message Message) {
-                // Check if message is of the given type and meets the predicate
-                if (Message is TMessage MessageOfT && (Where is null || Where(MessageOfT))) {
-                    // Set return variable and signal
-                    CompletionSource.TrySetResult(MessageOfT);
-                }
-            }
-            // Listen for messages
-            OnReceive += Filter;
-            // Await a matching message
-            TMessage ReturnMessage = await CompletionSource.Task;
-            // Stop listening for messages
-            OnReceive -= Filter;
-            // Return the matched message
-            return ReturnMessage;
-        }
-        public async Task DisconnectAsync(string Reason = DisconnectReason.NoReasonGiven) {
-            // Debounce
-            if (!Connected) return;
-            // Send disconnect message
-            await SendTcpAsync(new DisconnectMessage(Reason));
-            // Dispose
-            Dispose();
-            // Invoke on disconnect
-            OnDisconnect?.Invoke(false, Reason);
-        }
-        internal void DisconnectSilently(string Reason = DisconnectReason.NoReasonGiven, bool ByRemote = false) {
-            // Debounce
-            if (!Connected) return;
-            // Dispose
-            Dispose();
-            // Invoke on disconnect
-            OnDisconnect?.Invoke(ByRemote, Reason);
-        }
-        public void Dispose() {
-            // Mark as disconnected
-            if (!Connected) return;
-            Connected = false;
-            // Close client
-            Client.Close();
-            // Dispose semaphore
-            NetworkSemaphore.Dispose();
-            // Close UDP client
-            UdpClient.Close();
-        }
-        internal void InvokeOnReceive(Message Message) {
-            try {
-                OnReceive?.Invoke(Message);
-            }
-            catch (Exception Ex) {
-                // Get error info (message hidden for server errors)
-                string Error = TCPMaid is TCPMaidClient
-                    ? $"{Ex.GetType().Name}: {Ex.Message}"
-                    : Ex.GetType().Name;
-                // Disconnect on error
-                _ = DisconnectAsync($"{DisconnectReason.Error} ({Error})");
             }
         }
         private UdpClient SetupUdpClient() {
@@ -454,10 +454,10 @@ namespace TCPMaid {
         /// </summary>
         TCP,
         /// <summary>
-        /// Prioritises speed at the cost of lost or unordered packets.<br/>
+        /// Prioritises speed at the cost of dropped or unordered messages.<br/>
         /// <b>Messages are not encrypted, even if SSL is enabled.</b>
         /// </summary>
-        UDP
+        UDP,
     }
     public abstract class Message {
         private static readonly IReadOnlyDictionary<string, Type> MessageTypes = GetMessageTypes();
