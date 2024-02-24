@@ -387,6 +387,8 @@ namespace TCPMaid {
         private UdpClient SetupUdpClient() {
             // Create UDP client
             UdpClient UdpClient = new(AddressFamily.InterNetworkV6);
+            // Allow IPv4 and IPv6
+            UdpClient.Client.SetSocketOption(SocketOptionLevel.IPv6, SocketOptionName.IPv6Only, false);
             // Prevent error for reusing address
             UdpClient.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
             // Get local TCP end point

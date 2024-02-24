@@ -27,7 +27,7 @@
                 Client.OnConnect += (Connection) => {
                     Console.WriteLine("Connected!");
                 };
-                Client.ConnectAsync("localhost", 12345).Wait();
+                Client.ConnectAsync("127.0.0.1", 12345).Wait();
             }
         }
         class BlankMessage : Message { }
