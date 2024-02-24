@@ -1,23 +1,24 @@
 ﻿using System;
 using System.Threading.Tasks;
-using System.Linq;
 using System.Collections.Generic;
 using System.Collections.Concurrent;
+using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Net.Security;
 using System.Security.Cryptography.X509Certificates;
 
 namespace TCPMaid {
-    public sealed class TCPMaidServer : TCPMaidBase {
+    public sealed class TCPMaidServer : TCPMaid {
         public readonly int Port;
+        public new ServerOptions Options => (ServerOptions)base.Options;
         public bool Active { get; private set; }
-        public ServerOptions Options => (ServerOptions)BaseOptions;
 
         public event Action? OnStart;
         public event Action? OnStop;
         public event Action<Connection>? OnConnect;
         public event Action<Connection, bool, string>? OnDisconnect;
+        public event Action<Connection, Message>? OnReceive;
 
         private readonly TcpListener Listener;
         private readonly ConcurrentDictionary<Connection, byte> Clients = new();
@@ -29,11 +30,11 @@ namespace TCPMaid {
             Listener = TcpListener.Create(Port);
             Listener.Server.NoDelay = true;
         }
-        public void Start(X509Certificate2? certificate = null) {
+        public void Start(X509Certificate2? Certificate = null) {
             // Start listener
             Listener.Start();
             // Accept clients
-            _ = AcceptClientAsync(certificate);
+            _ = AcceptClientAsync(Certificate);
             // Invoke start event
             OnStart?.Invoke();
             // Mark the server as activated
@@ -50,17 +51,30 @@ namespace TCPMaid {
             // Invoke stop event
             OnStop?.Invoke();
         }
-        public async Task BroadcastAsync(Message Message, Connection? Exclude = null, Predicate<Connection>? ExcludeWhere = null) {
-            await ForEachClientAsync(async Client => await Client.SendAsync(Message), Exclude, ExcludeWhere);
+        public async Task BroadcastAsync(Message Message, Protocol Protocol = Protocol.TCP, Connection? Exclude = null, Predicate<Connection>? ExcludeWhere = null) {
+            // Send message to each client
+            await ForEachClientAsync(async Client => await Client.SendAsync(Message, Protocol), Exclude, ExcludeWhere);
         }
         public async Task DisconnectAllAsync(string Reason = DisconnectReason.NoReasonGiven, Connection? Exclude = null, Predicate<Connection>? ExcludeWhere = null) {
+            // Disconnect each client
             await ForEachClientAsync(async Client => await Client.DisconnectAsync(Reason), Exclude, ExcludeWhere);
         }
         public Connection[] GetClients() {
             return Clients.Keys.ToArray();
         }
         public int ClientCount => Clients.Count;
-
+        
+        private async Task ForEachClientAsync(Func<Connection, Task> Action, Connection? Exclude, Predicate<Connection>? ExcludeWhere) {
+            // Start action for each client
+            List<Task> Tasks = new();
+            foreach (KeyValuePair<Connection, byte> Client in Clients) {
+                if (Client.Key != Exclude && (ExcludeWhere is null || !ExcludeWhere(Client.Key))) {
+                    Tasks.Add(Action(Client.Key));
+                }
+            }
+            // Wait until all actions are complete
+            await Task.WhenAll(Tasks);
+        }
         private async Task AcceptClientAsync(X509Certificate2? Certificate) {
             // Wait for a client to connect
             TcpClient TcpClient;
@@ -82,8 +96,10 @@ namespace TCPMaid {
             // Create connection (SSL or not)
             Connection Client;
             try {
-                // Get the client's network stream
+                // Get the network stream
                 NetworkStream NetworkStream = TcpClient.GetStream();
+                // Get the remote end point
+                IPEndPoint RemoteEndPoint = (IPEndPoint)TcpClient.Client.RemoteEndPoint!;
 
                 // SSL (encrypted)
                 if (Certificate is not null) {
@@ -92,12 +108,12 @@ namespace TCPMaid {
                     // Authenticate stream
                     await SslStream.AuthenticateAsServerAsync(Certificate, clientCertificateRequired: false, checkCertificateRevocation: true);
                     // Create encrypted connection
-                    Client = new Connection(this, TcpClient, (IPEndPoint)TcpClient.Client.RemoteEndPoint!, SslStream, NetworkStream);
+                    Client = new Connection(this, TcpClient, RemoteEndPoint, SslStream);
                 }
                 // Plain
                 else {
                     // Create plain connection
-                    Client = new Connection(this, TcpClient, (IPEndPoint)TcpClient.Client.RemoteEndPoint!, NetworkStream, NetworkStream);
+                    Client = new Connection(this, TcpClient, RemoteEndPoint, NetworkStream);
                 }
             }
             // Failed to create connection
@@ -118,23 +134,20 @@ namespace TCPMaid {
                 // Invoke disconnect event
                 OnDisconnect?.Invoke(Client, ByRemote, Reason);
             };
+            // Listen to receive event
+            Client.OnReceive += (Message) => {
+                // Invoke receive event
+                OnReceive?.Invoke(Client, Message);
+            };
             // Invoke connect event
             OnConnect?.Invoke(Client);
             // Add client to connections
             Clients.TryAdd(Client, 0);
             // Listen to client
-            _ = ListenForMessages(Client);
+            _ = ListenForTcpMessages(Client);
+            _ = ListenForUdpMessages(Client);
             // Start measuring ping
             _ = StartPingPong(Client);
-        }
-        private async Task ForEachClientAsync(Func<Connection, Task> Action, Connection? Exclude, Predicate<Connection>? ExcludeWhere) {
-            List<Task> Tasks = new();
-            foreach (KeyValuePair<Connection, byte> Client in Clients) {
-                if (Client.Key != Exclude && (ExcludeWhere is null || !ExcludeWhere(Client.Key))) {
-                    Tasks.Add(Action(Client.Key));
-                }
-            }
-            await Task.WhenAll(Tasks);
         }
     }
     public sealed class ServerOptions : BaseOptions {

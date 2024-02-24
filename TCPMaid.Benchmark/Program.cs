@@ -6,14 +6,18 @@
             Server.OnConnect += (Connection) => {
                 Console.WriteLine($"{Server.ClientCount} clients.");
             };
+            Server.OnDisconnect += (Connection, ByRemote, Reason) => {
+                Console.WriteLine($"Disconnected: {Reason}");
+            };
             Server.Start();
 
             // Broadcast messages
             Task.Run(async () => {
                 while (true) {
-                    const double BroadcastsPerSecond = 20;
-                    await Task.Delay(TimeSpan.FromSeconds(1.0 / BroadcastsPerSecond));
+                    const double BroadcastsPerSecond = 10;
+                    await Task.Delay(TimeSpan.FromSeconds(1 / BroadcastsPerSecond));
                     await Server.BroadcastAsync(new BlankMessage());
+                    await Server.BroadcastAsync(new BlankMessage(), Protocol.UDP);
                 }
             });
 

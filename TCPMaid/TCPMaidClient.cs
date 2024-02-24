@@ -5,13 +5,14 @@ using System.Net.Sockets;
 using System.Net.Security;
 
 namespace TCPMaid {
-    public sealed class TCPMaidClient : TCPMaidBase {
-        public ClientOptions Options => (ClientOptions)BaseOptions;
-        public bool Connected => Connection is not null && Connection.Connected;
-        public Connection? Connection { get; private set; }
+    public sealed class TCPMaidClient : TCPMaid {
+        public new ClientOptions Options => (ClientOptions)base.Options;
+        public bool Connected => Server is not null && Server.Connected;
+        public Connection? Server { get; private set; }
 
         public event Action<Connection>? OnConnect;
-        public event Action<Connection, bool, string>? OnDisconnect;
+        public event Action<bool, string>? OnDisconnect;
+        public event Action<Message>? OnReceive;
 
         public TCPMaidClient(ClientOptions? options = null) : base(options ?? new ClientOptions()) {
         }
@@ -32,9 +33,12 @@ namespace TCPMaid {
             }
 
             // Create connection (SSL or not)
-            Connection Client;
             try {
+                // Get the network stream
                 NetworkStream NetworkStream = TcpClient.GetStream();
+                // Get the remote end point
+                IPEndPoint RemoteEndPoint = (IPEndPoint)TcpClient.Client.RemoteEndPoint!;
+
                 // SSL (encrypted)
                 if (Ssl) {
                     // Create SSL stream
@@ -42,12 +46,12 @@ namespace TCPMaid {
                     // Authenticate stream
                     await SslStream.AuthenticateAsClientAsync(ServerHost);
                     // Create encrypted connection
-                    Connection = Client = new Connection(this, TcpClient, (IPEndPoint)TcpClient.Client.RemoteEndPoint!, SslStream, NetworkStream);
+                    Server = new Connection(this, TcpClient, RemoteEndPoint, SslStream);
                 }
                 // Plain
                 else {
                     // Create plain connection
-                    Connection = Client = new Connection(this, TcpClient, (IPEndPoint)TcpClient.Client.RemoteEndPoint!, NetworkStream, NetworkStream);
+                    Server = new Connection(this, TcpClient, RemoteEndPoint, NetworkStream);
                 }
             }
             // Failed to create connection
@@ -56,18 +60,24 @@ namespace TCPMaid {
             }
 
             // Listen to disconnect event
-            Client.OnDisconnect += (ByRemote, Reason) => {
+            Server.OnDisconnect += (ByRemote, Reason) => {
                 // Remove connection
-                Connection = null;
+                Server = null;
                 // Invoke disconnect event
-                OnDisconnect?.Invoke(Client, ByRemote, Reason);
+                OnDisconnect?.Invoke(ByRemote, Reason);
+            };
+            // Listen to receive event
+            Server.OnReceive += (Message) => {
+                // Invoke receive event
+                OnReceive?.Invoke(Message);
             };
             // Listen to server
-            _ = ListenForMessages(Client);
+            _ = ListenForTcpMessages(Server);
+            _ = ListenForUdpMessages(Server);
             // Start measuring ping
-            _ = StartPingPong(Client);
+            _ = StartPingPong(Server);
             // Invoke connect event
-            OnConnect?.Invoke(Client);
+            OnConnect?.Invoke(Server);
             // Return success
             return true;
         }

@@ -11,22 +11,22 @@ using System.Net;
 using System.Net.Sockets;
 using System.Net.Security;
 using Newtonsoft.Json;
-using static TCPMaid.TCPMaidBase;
+using static TCPMaid.TCPMaid;
 
 namespace TCPMaid {
-    public abstract class TCPMaidBase {
-        internal readonly BaseOptions BaseOptions;
+    public abstract class TCPMaid {
+        internal readonly BaseOptions Options;
 
         // Sizes of packet components
         internal const int PacketLengthSize = sizeof(int);
         internal const int MessageIdSize = sizeof(ulong);
         internal const int MessageLengthSize = sizeof(int);
 
-        internal TCPMaidBase(BaseOptions base_options) {
-            BaseOptions = base_options;
+        internal TCPMaid(BaseOptions options) {
+            Options = options;
         }
 
-        protected async Task ListenForMessages(Connection Connection) {
+        protected async Task ListenForTcpMessages(Connection Connection) {
             // Listen for disconnect messages
             Connection.OnReceive += (Message Message) => {
                 if (Message is DisconnectMessage DisconnectMessage) {
@@ -42,10 +42,10 @@ namespace TCPMaid {
                 // Read messages while connected
                 while (Connection.Connected) {
                     // Wait for bytes from the network stream
-                    await ReadBytesFromStreamAsync(Connection.Stream, PendingBytes, BaseOptions.BufferSize, BaseOptions.DisconnectTimeout);
+                    await ReadBytesFromStreamAsync(Connection.Stream, PendingBytes, Options.BufferSize, Options.DisconnectTimeout);
 
                     // Limit memory usage on server
-                    if (BaseOptions is ServerOptions ServerOptions) {
+                    if (Options is ServerOptions ServerOptions) {
                         // Calculate total bytes used in pending messages from client
                         int PendingSize = PendingBytes.Count + PendingMessages.Sum(PendingMessage => PendingMessage.Value.Bytes.Length);
                         // Check if total exceeds limit
@@ -116,7 +116,38 @@ namespace TCPMaid {
             }
             // Disconnected - close connection
             catch (Exception) {
-                await Connection.DisconnectAsync(DisconnectReason.Unknown);
+                await Connection.DisconnectAsync(DisconnectReason.Error);
+                return;
+            }
+        }
+        protected static async Task ListenForUdpMessages(Connection Connection) {
+            // Listen for incoming packets
+            try {
+                // Receive packet while connected
+                while (Connection.Connected) {
+                    // Receive packet
+                    UdpReceiveResult Packet = await Connection.UdpClient.ReceiveAsync();
+                    // Ensure packet is from sender
+                    if (!Packet.RemoteEndPoint.Equals(Connection.EndPoint)) {
+                        continue;
+                    }
+
+                    // Construct message
+                    Message? Message = Message.FromBytes(Packet.Buffer);
+                    // Handle message
+                    if (Message is not null) {
+                        Connection.InvokeOnReceive(Message);
+                    }
+                }
+            }
+            // Timeout - close connection
+            catch (OperationCanceledException) {
+                await Connection.DisconnectAsync(DisconnectReason.Timeout);
+                return;
+            }
+            // Disconnected - close connection
+            catch (Exception) {
+                await Connection.DisconnectAsync(DisconnectReason.Error);
                 return;
             }
         }
@@ -132,7 +163,7 @@ namespace TCPMaid {
             // Request pings
             while (Connection.Connected) {
                 // Wait until next ping
-                await Task.Delay(TimeSpan.FromSeconds(BaseOptions.PingRequestInterval));
+                await Task.Delay(TimeSpan.FromSeconds(Options.PingRequestInterval));
                 // Restart timer
                 Timer.Restart();
                 // Request ping response
@@ -189,42 +220,49 @@ namespace TCPMaid {
     }
     public sealed class Connection : IDisposable {
         /// <summary>The TCPMaid instance this connection belongs to.</summary>
-        public readonly TCPMaidBase TCPMaid;
+        public readonly TCPMaid TCPMaid;
         /// <summary>On the server, this is the remote client. On the client, this is the local client.</summary>
         public readonly TcpClient Client;
         /// <summary>The IP address and port of the remote connection.</summary>
         public readonly IPEndPoint EndPoint;
         /// <summary>If the connection is encrypted, this is an <see cref="SslStream"/> that wraps around the <see cref="NetworkStream"/>. Otherwise, it's the <see cref="NetworkStream"/>.</summary>
         public readonly Stream Stream;
-        /// <summary>The <see cref="NetworkStream"/> of the connection.</summary>
-        public readonly NetworkStream InnerStream;
+        /// <summary>The local UDP client.</summary>
+        public readonly UdpClient UdpClient;
 
         public bool Connected { get; private set; } = true;
         public double Ping { get; internal set; }
 
-        public event Action<Message>? OnReceive;
         public event Action<bool, string>? OnDisconnect;
+        public event Action<Message>? OnReceive;
 
         private readonly SemaphoreSlim NetworkSemaphore = new(1, 1);
 
         private static ulong LastMessageId;
 
-        internal Connection(TCPMaidBase tcp_maid_base, TcpClient client, IPEndPoint end_point, Stream stream, NetworkStream inner_stream) {
-            TCPMaid = tcp_maid_base;
+        internal Connection(TCPMaid tcp_maid, TcpClient client, IPEndPoint end_point, Stream stream) {
+            TCPMaid = tcp_maid;
             Client = client;
             EndPoint = end_point;
             Stream = stream;
-            InnerStream = inner_stream;
+            UdpClient = SetupUdpClient();
         }
 
-        public async Task<bool> SendAsync(Message Message) {
+        public async Task<bool> SendAsync(Message Message, Protocol Protocol = Protocol.TCP) {
+            return await (Protocol switch {
+                Protocol.TCP => SendTcpAsync(Message),
+                Protocol.UDP => SendUdpAsync(Message),
+                _ => throw new NotSupportedException()
+            });
+        }
+        private async Task<bool> SendTcpAsync(Message Message) {
             // Generate message ID
             ulong MessageId = Interlocked.Increment(ref LastMessageId);
 
             // Get bytes from message
             byte[] Bytes = Message.ToBytes();
             // Split bytes into smaller fragments
-            byte[][] ByteFragments = Fragment(Bytes, TCPMaid.BaseOptions.MessageFragmentSize);
+            byte[][] ByteFragments = Fragment(Bytes, TCPMaid.Options.MessageFragmentSize);
 
             // Create packets from byte fragments
             byte[][] Packets = new byte[ByteFragments.Length][];
@@ -235,15 +273,39 @@ namespace TCPMaid {
 
             // Write bytes to message stream
             try {
-                // Send first packet
-                await SendRawAsync(Packets[0]);
-                // Send extra packets
-                for (int i = 1; i < Packets.Length; i++) {
+                // Send packets
+                for (int i = 0; i < Packets.Length; i++) {
                     // Await send packet message
-                    await WaitForMessageAsync<SendNextPacketMessage>(Message => Message.MessageId == MessageId);
-                    // Send extra packet
-                    await SendRawAsync(Packets[i]);
+                    if (i != 0) await WaitForMessageAsync<SendNextPacketMessage>(Message => Message.MessageId == MessageId);
+
+                    // Await semaphore
+                    await NetworkSemaphore.WaitAsync();
+                    try {
+                        // Send packet
+                        await Stream.WriteAsync(Packets[i]);
+                    }
+                    finally {
+                        // Release semaphore
+                        NetworkSemaphore.Release();
+                    }
                 }
+                // Send success!
+                return true;
+            }
+            // Failed to send message
+            catch (Exception) {
+                DisconnectSilently(DisconnectReason.Error);
+                return false;
+            }
+        }
+        private async Task<bool> SendUdpAsync(Message Message) {
+            // Get bytes from message
+            byte[] Bytes = Message.ToBytes();
+
+            // Send bytes to remote client
+            try {
+                // Send bytes
+                await UdpClient.SendAsync(Bytes);
                 // Send success!
                 return true;
             }
@@ -255,7 +317,7 @@ namespace TCPMaid {
         }
         public async Task<TResponse?> RequestAsync<TResponse>(Request Request, Predicate<TResponse>? Filter = null) where TResponse : Response {
             // Send request
-            if (await SendAsync(Request)) {
+            if (await SendTcpAsync(Request)) {
                 // Return response
                 return await WaitForMessageAsync<TResponse>(Response => Response.RequestId == Request.RequestId && (Filter is null || Filter(Response)));
             }
@@ -288,7 +350,7 @@ namespace TCPMaid {
             // Debounce
             if (!Connected) return;
             // Send disconnect message
-            await SendAsync(new DisconnectMessage(Reason));
+            await SendTcpAsync(new DisconnectMessage(Reason));
             // Dispose
             Dispose();
             // Invoke on disconnect
@@ -310,6 +372,8 @@ namespace TCPMaid {
             Client.Close();
             // Dispose semaphore
             NetworkSemaphore.Dispose();
+            // Close UDP client
+            UdpClient.Close();
         }
         internal void InvokeOnReceive(Message Message) {
             try {
@@ -324,17 +388,19 @@ namespace TCPMaid {
                 _ = DisconnectAsync($"{DisconnectReason.Error} ({Error})");
             }
         }
-        private async Task SendRawAsync(byte[] Data) {
-            // Await semaphore
-            await NetworkSemaphore.WaitAsync();
-            try {
-                // Send data
-                await Stream.WriteAsync(Data);
-            }
-            finally {
-                // Release semaphore
-                NetworkSemaphore.Release();
-            }
+        private UdpClient SetupUdpClient() {
+            // Create UDP client
+            UdpClient UdpClient = new(AddressFamily.InterNetworkV6);
+            // Prevent error for reusing address
+            UdpClient.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
+            // Get local TCP end point
+            IPEndPoint LocalEndPoint = (IPEndPoint)Client.Client.LocalEndPoint!;
+            // Bind UDP client to local TCP port
+            UdpClient.Client.Bind(new IPEndPoint(IPAddress.IPv6Any, LocalEndPoint.Port));
+            // Connect UDP client to remote end point
+            UdpClient.Connect(EndPoint);
+            // Return UDP client
+            return UdpClient;
         }
         private static byte[] CreateFirstPacket(ulong MessageId, int MessageLength, byte[] Bytes) {
             byte[] MessageIdBytes = BitConverter.GetBytes(MessageId);
@@ -381,6 +447,17 @@ namespace TCPMaid {
         public const string ServerShutdown = "The server is shutting down.";
         /// <summary>The client is using too much memory on the server.</summary>
         public const string HighMemoryUsage = "The client is using too much memory on the server.";
+    }
+    public enum Protocol {
+        /// <summary>
+        /// Ensures reliable and ordered transmission of data.
+        /// </summary>
+        TCP,
+        /// <summary>
+        /// Prioritises speed at the cost of lost or unordered packets.<br/>
+        /// <b>Messages are not encrypted, even if SSL is enabled.</b>
+        /// </summary>
+        UDP
     }
     public abstract class Message {
         private static readonly IReadOnlyDictionary<string, Type> MessageTypes = GetMessageTypes();
