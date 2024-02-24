@@ -10,6 +10,7 @@ TCPMaid makes it easy to setup a robust client & server, send messages and reque
 
 ## Features
 - Easy client & server setup
+- Supports TCP and UDP
 - Supports SSL encryption and certificates
 - Automatically serialises messages
 - Send requests and await a response
@@ -50,7 +51,7 @@ public static async void Client() {
     await Client.ConnectAsync("localhost", 5000);
 
     // Say hello to server
-    await Client.Connection!.SendAsync(new ExampleMessage("hello server!"));
+    await Client.Server!.SendAsync(new ExampleMessage("hello server!"));
 }
 ```
 ```cs
