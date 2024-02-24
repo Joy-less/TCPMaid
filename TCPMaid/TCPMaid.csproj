@@ -11,7 +11,7 @@
     <FileVersion></FileVersion>
     <Version>2.0.1</Version>
     <Authors>Joyless</Authors>
-    <PackageTags>TCP; Netcode; Networking; Server; Client</PackageTags>
+    <PackageTags>TCP; UDP; Netcode; Networking; Server; Client</PackageTags>
     <Description>An easy, powerful and lightweight TCP client/server in C#.</Description>
     <PackageProjectUrl>https://github.com/Joy-less/TCPMaid</PackageProjectUrl>
     <RepositoryUrl>https://github.com/Joy-less/TCPMaid</RepositoryUrl>
