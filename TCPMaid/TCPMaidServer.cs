@@ -132,15 +132,15 @@ namespace TCPMaid {
                 // Invoke receive event
                 OnReceive?.Invoke(Client, Message);
             };
-            // Invoke connect event
-            OnConnect?.Invoke(Client);
             // Add client to connections
             Clients.TryAdd(Client, 0);
             // Listen to client
-            _ = ListenForTcpMessages(Client);
-            _ = ListenForUdpMessages(Client);
+            _ = ListenForTCPMessages(Client);
+            _ = ListenForUDPMessages(Client);
             // Start measuring ping
             _ = StartPingPong(Client);
+            // Invoke connect event
+            OnConnect?.Invoke(Client);
         }
         void IDisposable.Dispose() {
             Stop();

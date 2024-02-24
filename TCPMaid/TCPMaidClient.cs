@@ -70,8 +70,8 @@ namespace TCPMaid {
                 OnReceive?.Invoke(Message);
             };
             // Listen to server
-            _ = ListenForTcpMessages(Server);
-            _ = ListenForUdpMessages(Server);
+            _ = ListenForTCPMessages(Server);
+            _ = ListenForUDPMessages(Server);
             // Start measuring ping
             _ = StartPingPong(Server);
             // Invoke connect event

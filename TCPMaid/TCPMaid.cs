@@ -27,7 +27,7 @@ namespace TCPMaid {
             Options = options;
         }
 
-        protected async Task ListenForTcpMessages(Connection Connection) {
+        protected async Task ListenForTCPMessages(Connection Connection) {
             // Listen for disconnect messages
             Connection.OnReceive += (Message Message) => {
                 if (Message is DisconnectMessage DisconnectMessage) {
@@ -103,13 +103,8 @@ namespace TCPMaid {
 
                         // Construct message
                         Message? Message = Message.FromBytes(PendingMessage.Bytes);
-                        // Set shared secret
-                        if (Message is SharedSecretMessage SharedSecretMessage) {
-                            Connection.SharedSecret ??= SharedSecretMessage.Secret;
-                            Connection.OnSharedSecret.TrySetResult();
-                        }
                         // Handle message
-                        else if (Message is not null) {
+                        if (Message is not null) {
                             Connection.InvokeOnReceive(Message);
                         }
                     }
@@ -126,28 +121,26 @@ namespace TCPMaid {
                 return;
             }
         }
-        protected static async Task ListenForUdpMessages(Connection Connection) {
+        protected static async Task ListenForUDPMessages(Connection Connection) {
             // Listen for incoming packets
             try {
+                // Await UDP setup
+                await Connection.OnUDPSetup.Task;
+
                 // Receive packet while connected
                 while (Connection.Connected) {
                     // Receive packet
-                    UdpReceiveResult Packet = await Connection.UdpClient.ReceiveAsync();
+                    UdpReceiveResult Packet = await Connection.UDPClient.ReceiveAsync();
                     byte[] Bytes = Packet.Buffer;
 
                     // Ensure packet is from connection
-                    if (!Packet.RemoteEndPoint.Equals(Connection.RemoteEndPoint)) {
+                    if (!Packet.RemoteEndPoint.Equals(Connection.RemoteUDPEndPoint)) {
                         continue;
                     }
 
-                    // Encrypted message
+                    // Decrypt bytes
                     if (Connection.Encrypted) {
-                        // Get shared secret
-                        while (Connection.SharedSecret is null) {
-                            await Connection.OnSharedSecret.Task;
-                        }
-                        // Decrypt packet
-                        Bytes = await DecryptAsync(Bytes, Connection.SharedSecret);
+                        Bytes = await DecryptAsync(Bytes, Connection.SharedSecret!);
                     }
 
                     // Construct message
@@ -157,11 +150,6 @@ namespace TCPMaid {
                         Connection.InvokeOnReceive(Message);
                     }
                 }
-            }
-            // Timeout - close connection
-            catch (OperationCanceledException) {
-                await Connection.DisconnectAsync(DisconnectReason.Timeout);
-                return;
             }
             // Disconnected - close connection
             catch (Exception) {
@@ -283,12 +271,12 @@ namespace TCPMaid {
         public readonly TcpClient Client;
         /// <summary>If the connection is encrypted, this is an <see cref="SslStream"/> that wraps the <see cref="NetworkStream"/>. Otherwise, it's the <see cref="NetworkStream"/>.</summary>
         public readonly Stream Stream;
-        /// <summary>The IP address and port of the remote connection.</summary>
+        /// <summary>The IP address and port of the remote TCP connection.</summary>
         public readonly IPEndPoint RemoteEndPoint;
-        /// <summary>The IP address and port of the local connection.</summary>
+        /// <summary>The IP address and port of the local TCP connection.</summary>
         public readonly IPEndPoint LocalEndPoint;
-        /// <summary>The local UDP client.</summary>
-        public readonly UdpClient UdpClient;
+        /// <summary>The local UDP client or server.</summary>
+        public readonly UdpClient UDPClient;
 
         public bool Connected { get; private set; } = true;
         public double Ping { get; internal set; }
@@ -297,8 +285,10 @@ namespace TCPMaid {
         public event Action<bool, string>? OnDisconnect;
         public event Action<Message>? OnReceive;
 
+        internal readonly TaskCompletionSource OnUDPSetup = new();
+        internal IPEndPoint? RemoteUDPEndPoint;
+        internal IPEndPoint? LocalUDPEndPoint;
         internal byte[]? SharedSecret;
-        internal readonly TaskCompletionSource OnSharedSecret = new();
 
         private readonly SemaphoreSlim NetworkSemaphore = new(1, 1);
         private static ulong LastMessageId;
@@ -309,14 +299,12 @@ namespace TCPMaid {
             Stream = stream;
             RemoteEndPoint = (IPEndPoint)Client.Client.RemoteEndPoint!;
             LocalEndPoint = (IPEndPoint)Client.Client.LocalEndPoint!;
-            UdpClient = SetupUdpClient();
-            SetupSharedSecret();
+            UDPClient = SetupUDP();
         }
-
         public async Task<bool> SendAsync(Message Message, Protocol Protocol = Protocol.TCP) {
             return Protocol switch {
-                Protocol.TCP => await SendTcpAsync(Message),
-                Protocol.UDP => await SendUdpAsync(Message),
+                Protocol.TCP => await SendTCPAsync(Message),
+                Protocol.UDP => await SendUDPAsync(Message),
                 _ => throw new NotSupportedException()
             };
         }
@@ -377,7 +365,7 @@ namespace TCPMaid {
             // Dispose semaphore
             NetworkSemaphore.Dispose();
             // Close UDP client
-            UdpClient.Close();
+            UDPClient.Close();
         }
         internal void InvokeOnReceive(Message Message) {
             try {
@@ -393,7 +381,7 @@ namespace TCPMaid {
                 _ = DisconnectAsync($"{DisconnectReason.Error} ({Error})");
             }
         }
-        private async Task<bool> SendTcpAsync(Message Message) {
+        private async Task<bool> SendTCPAsync(Message Message) {
             // Generate message ID
             ulong MessageId = Interlocked.Increment(ref LastMessageId);
 
@@ -436,24 +424,22 @@ namespace TCPMaid {
                 return false;
             }
         }
-        private async Task<bool> SendUdpAsync(Message Message) {
+        private async Task<bool> SendUDPAsync(Message Message) {
             // Get bytes from message
             byte[] Bytes = Message.ToBytes();
 
-            // Encrypted message
+            // Await UDP setup
+            await OnUDPSetup.Task;
+
+            // Encrypt bytes
             if (Encrypted) {
-                // Get shared secret
-                while (SharedSecret is null) {
-                    await OnSharedSecret.Task;
-                }
-                // Encrypt bytes
-                Bytes = await EncryptAsync(Bytes, SharedSecret);
+                Bytes = await EncryptAsync(Bytes, SharedSecret!);
             }
 
             // Send bytes to remote client
             try {
                 // Send bytes
-                await UdpClient.SendAsync(Bytes);
+                await UDPClient.SendAsync(Bytes);
                 // Send success!
                 return true;
             }
@@ -463,32 +449,57 @@ namespace TCPMaid {
                 return false;
             }
         }
-        private UdpClient SetupUdpClient() {
+        private UdpClient SetupUDP() {
             // Create UDP client
-            UdpClient UdpClient = new(AddressFamily.InterNetworkV6);
-            // Allow IPv4 and IPv6
-            UdpClient.Client.SetSocketOption(SocketOptionLevel.IPv6, SocketOptionName.IPv6Only, false);
-            // Prevent error for reusing address
-            UdpClient.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
-            // Get local TCP end point
-            IPEndPoint LocalEndPoint = (IPEndPoint)Client.Client.LocalEndPoint!;
-            // Bind UDP client to local TCP port
-            UdpClient.Client.Bind(new IPEndPoint(IPAddress.IPv6Any, LocalEndPoint.Port));
-            // Connect UDP client to remote end point
-            UdpClient.Connect(RemoteEndPoint);
-            // Return UDP client
-            return UdpClient;
-        }
-        private void SetupSharedSecret() {
-            if (Encrypted && TCPMaid is TCPMaidServer) {
-                // Generate shared secret
-                SharedSecretMessage SharedSecretMessage = new();
-                // Set shared secret
-                SharedSecret ??= SharedSecretMessage.Secret;
-                OnSharedSecret.TrySetResult();
-                // Send shared secret
-                _ = SendAsync(SharedSecretMessage);
+            UdpClient UDPClient = new(AddressFamily.InterNetworkV6);
+            UDPClient.Client.SetSocketOption(SocketOptionLevel.IPv6, SocketOptionName.IPv6Only, false);
+
+            // Setup server UDP connection
+            if (TCPMaid is TCPMaidServer) {
+                _ = SetupServerUDP(UDPClient);
             }
+            // Setup client UDP connection
+            else {
+                OnReceive += (Message) => {
+                    if (Message is SetupUDPRequest Request) {
+                        _ = SetupClientUDP(UDPClient, Request);
+                    }
+                };
+            }
+            // Return UDP client
+            return UDPClient;
+        }
+        private async Task SetupServerUDP(UdpClient UDPServer) {
+            // Generate shared secret
+            if (Encrypted) {
+                SharedSecret = RandomNumberGenerator.GetBytes(256 / 8);
+            }
+            // Bind UDP to free port
+            UDPServer.Client.Bind(new IPEndPoint(IPAddress.IPv6Any, 0));
+            // Get end points
+            LocalUDPEndPoint = (IPEndPoint)UDPServer.Client.LocalEndPoint!;
+            RemoteUDPEndPoint = RemoteEndPoint;
+            // Connect UDP to remote on remote TCP port
+            UDPServer.Connect(RemoteUDPEndPoint);
+            // Request client setup
+            await RequestAsync<SetupUDPResponse>(new SetupUDPRequest(LocalUDPEndPoint.Port, SharedSecret));
+            // Finish
+            OnUDPSetup.TrySetResult();
+        }
+        private async Task SetupClientUDP(UdpClient UDPClient, SetupUDPRequest Request) {
+            // Set shared secret
+            SharedSecret = Request.Secret;
+            // Get end points
+            LocalUDPEndPoint = LocalEndPoint;
+            RemoteUDPEndPoint = new IPEndPoint(RemoteEndPoint.Address, Request.ServerPort);
+            // Bind UDP to local TCP port
+            UDPClient.Client.Bind(new IPEndPoint(IPAddress.IPv6Any, LocalUDPEndPoint.Port));
+            // Connect UDP to given remote port
+            UDPClient.Connect(RemoteUDPEndPoint.Address, Request.ServerPort);
+            // Respond setup complete
+            await SendAsync(new SetupUDPResponse(Request.RequestId));
+            // Finish
+            OnUDPSetup.TrySetResult();
         }
         private static byte[] CreateFirstPacket(ulong MessageId, int MessageLength, byte[] Bytes) {
             byte[] MessageIdBytes = BitConverter.GetBytes(MessageId);
@@ -550,10 +561,7 @@ namespace TCPMaid {
         private static readonly IReadOnlyDictionary<string, Type> MessageTypes = GetMessageTypes();
         private const char NameDataSeparator = ':';
 
-        public static Type? GetMessageTypeFromName(string Name) {
-            MessageTypes.TryGetValue(Name, out Type? Type);
-            return Type;
-        }
+        public bool Internal => this is DisconnectMessage or SendNextPacketMessage or SetupUDPRequest or SetupUDPResponse or PingRequest or PingResponse;
         public byte[] ToBytes() {
             // Get message name and serialise message data
             (string Name, string Serialised) = (GetType().Name, JsonConvert.SerializeObject(this));
@@ -574,6 +582,10 @@ namespace TCPMaid {
             // Create message
             return (Message?)JsonConvert.DeserializeObject(Serialised, MessageType);
         }
+        public static Type? GetMessageTypeFromName(string Name) {
+            MessageTypes.TryGetValue(Name, out Type? Type);
+            return Type;
+        }
 
         private static Dictionary<string, Type> GetMessageTypes() {
             return AppDomain.CurrentDomain.GetAssemblies().SelectMany(Asm => Asm.GetTypes())
@@ -592,21 +604,31 @@ namespace TCPMaid {
             RequestId = request_id;
         }
     }
-    public sealed class SharedSecretMessage : Message {
-        [JsonProperty] public readonly byte[] Secret = RandomNumberGenerator.GetBytes(256 / 8);
-        [JsonConstructor] internal SharedSecretMessage() {
-        }
-    }
-    public sealed class SendNextPacketMessage : Message {
-        [JsonProperty] public readonly ulong MessageId;
-        [JsonConstructor] internal SendNextPacketMessage(ulong message_id) {
-            MessageId = message_id;
-        }
-    }
     public sealed class DisconnectMessage : Message {
         [JsonProperty] public readonly string Reason;
         [JsonConstructor] internal DisconnectMessage(string reason) {
             Reason = reason;
+        }
+    }
+    public sealed class SendNextPacketMessage : Message {
+        [JsonProperty] public readonly ulong MessageId;
+        [JsonConstructor]
+        internal SendNextPacketMessage(ulong message_id) {
+            MessageId = message_id;
+        }
+    }
+    public sealed class SetupUDPRequest : Request {
+        [JsonProperty] public readonly int ServerPort;
+        [JsonProperty] public readonly byte[]? Secret;
+        [JsonConstructor]
+        internal SetupUDPRequest(int server_port, byte[]? secret) {
+            ServerPort = server_port;
+            Secret = secret;
+        }
+    }
+    public sealed class SetupUDPResponse : Response {
+        [JsonConstructor]
+        internal SetupUDPResponse(ulong request_id) : base(request_id) {
         }
     }
     public sealed class PingRequest : Request {
