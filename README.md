@@ -30,11 +30,10 @@ public static void Server() {
 
     // Listen to connect event
     Server.OnConnect += OnConnect;
+    Server.OnReceive += OnReceive;
     
     // Events
     void OnConnect(Connection Client) {
-        Client.OnReceive += Message => OnReceive(Client, Message);
-        
         Console.WriteLine("Hi, client!");
     }
     void OnReceive(Connection Client, Message Message) {
