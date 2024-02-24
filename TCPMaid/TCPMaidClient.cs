@@ -5,7 +5,7 @@ using System.Net.Sockets;
 using System.Net.Security;
 
 namespace TCPMaid {
-    public sealed class TCPMaidClient : TCPMaid {
+    public sealed class TCPMaidClient : TCPMaid, IDisposable {
         public new ClientOptions Options => (ClientOptions)base.Options;
         public bool Connected => Server is not null && Server.Connected;
         public Connection? Server { get; private set; }
@@ -80,6 +80,10 @@ namespace TCPMaid {
             OnConnect?.Invoke(Server);
             // Return success
             return true;
+        }
+
+        void IDisposable.Dispose() {
+            Server?.DisconnectAsync().Wait();
         }
     }
     public sealed class ClientOptions : BaseOptions {

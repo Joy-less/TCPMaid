@@ -127,10 +127,6 @@ namespace TCPMaid {
                 while (Connection.Connected) {
                     // Receive packet
                     UdpReceiveResult Packet = await Connection.UdpClient.ReceiveAsync();
-                    // Ensure packet is from sender
-                    if (!Packet.RemoteEndPoint.Equals(Connection.EndPoint)) {
-                        continue;
-                    }
 
                     // Construct message
                     Message? Message = Message.FromBytes(Packet.Buffer);

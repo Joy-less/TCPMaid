@@ -9,7 +9,7 @@ using System.Net.Security;
 using System.Security.Cryptography.X509Certificates;
 
 namespace TCPMaid {
-    public sealed class TCPMaidServer : TCPMaid {
+    public sealed class TCPMaidServer : TCPMaid, IDisposable {
         public readonly int Port;
         public new ServerOptions Options => (ServerOptions)base.Options;
         public bool Active { get; private set; }
@@ -88,11 +88,6 @@ namespace TCPMaid {
                 _ = AcceptClientAsync(Certificate);
             }
 
-            // Ensure server is active
-            if (!Active) {
-                return;
-            }
-
             // Create connection (SSL or not)
             Connection Client;
             try {
@@ -148,6 +143,9 @@ namespace TCPMaid {
             _ = ListenForUdpMessages(Client);
             // Start measuring ping
             _ = StartPingPong(Client);
+        }
+        void IDisposable.Dispose() {
+            Stop();
         }
     }
     public sealed class ServerOptions : BaseOptions {
