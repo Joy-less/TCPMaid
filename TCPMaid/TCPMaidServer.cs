@@ -3,7 +3,6 @@ using System.Threading.Tasks;
 using System.Collections.Generic;
 using System.Collections.Concurrent;
 using System.Linq;
-using System.Net;
 using System.Net.Sockets;
 using System.Net.Security;
 using System.Security.Cryptography.X509Certificates;
@@ -26,7 +25,7 @@ namespace TCPMaid {
         public TCPMaidServer(int port, ServerOptions? options = null) : base(options ?? new ServerOptions()) {
             // Initialise port field
             Port = port;
-            // Create TcpListener
+            // Create TCP Listener
             Listener = TcpListener.Create(Port);
             Listener.Server.NoDelay = true;
         }
@@ -80,9 +79,6 @@ namespace TCPMaid {
             TcpClient TcpClient;
             try {
                 TcpClient = await Listener.AcceptTcpClientAsync();
-            }
-            catch (Exception) {
-                return;
             }
             finally {
                 _ = AcceptClientAsync(Certificate);
