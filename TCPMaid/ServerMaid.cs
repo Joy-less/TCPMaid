@@ -8,7 +8,7 @@ using System.Net.Security;
 using System.Security.Cryptography.X509Certificates;
 
 namespace TCPMaid {
-    public sealed class TCPMaidServer : TCPMaid, IDisposable {
+    public sealed class ServerMaid : Maid, IDisposable {
         public readonly int Port;
         public new ServerOptions Options => (ServerOptions)base.Options;
         public bool Active { get; private set; }
@@ -22,7 +22,7 @@ namespace TCPMaid {
         private readonly TcpListener Listener;
         private readonly ConcurrentDictionary<Connection, byte> Clients = new();
 
-        public TCPMaidServer(int port, ServerOptions? options = null) : base(options ?? new ServerOptions()) {
+        public ServerMaid(int port, ServerOptions? options = null) : base(options ?? new ServerOptions()) {
             // Initialise port field
             Port = port;
             // Create TCP Listener
@@ -50,9 +50,9 @@ namespace TCPMaid {
             // Invoke stop event
             OnStop?.Invoke();
         }
-        public async Task BroadcastAsync(Message Message, Protocol Protocol = Protocol.TCP, Connection? Exclude = null, Predicate<Connection>? ExcludeWhere = null) {
+        public async Task BroadcastAsync(Message Message, Connection? Exclude = null, Predicate<Connection>? ExcludeWhere = null) {
             // Send message to each client
-            await ForEachClientAsync(async Client => await Client.SendAsync(Message, Protocol), Exclude, ExcludeWhere);
+            await ForEachClientAsync(async Client => await Client.SendAsync(Message), Exclude, ExcludeWhere);
         }
         public async Task DisconnectAllAsync(string Reason = DisconnectReason.NoReasonGiven, Connection? Exclude = null, Predicate<Connection>? ExcludeWhere = null) {
             // Disconnect each client
@@ -131,10 +131,9 @@ namespace TCPMaid {
             // Add client to connections
             Clients.TryAdd(Client, 0);
             // Listen to client
-            _ = ListenForTCPMessages(Client);
-            _ = ListenForUDPMessages(Client);
+            _ = ListenAsync(Client);
             // Start measuring ping
-            _ = StartPingPong(Client);
+            _ = PingPongAsync(Client);
             // Invoke connect event
             OnConnect?.Invoke(Client);
         }
@@ -142,7 +141,7 @@ namespace TCPMaid {
             Stop();
         }
     }
-    public sealed class ServerOptions : BaseOptions {
+    public sealed class ServerOptions : Options {
         /// <summary>The maximum number of clients that can connect to the server at once.<br/>
         /// Default: <see langword="null"/></summary>
         public int? MaxClients = null;

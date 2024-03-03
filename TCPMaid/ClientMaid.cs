@@ -4,7 +4,7 @@ using System.Net.Sockets;
 using System.Net.Security;
 
 namespace TCPMaid {
-    public sealed class TCPMaidClient : TCPMaid, IDisposable {
+    public sealed class ClientMaid : Maid, IDisposable {
         public new ClientOptions Options => (ClientOptions)base.Options;
         public bool Connected => Server is not null && Server.Connected;
         public Connection? Server { get; private set; }
@@ -13,7 +13,7 @@ namespace TCPMaid {
         public event Action<bool, string>? OnDisconnect;
         public event Action<Message>? OnReceive;
 
-        public TCPMaidClient(ClientOptions? options = null) : base(options ?? new ClientOptions()) {
+        public ClientMaid(ClientOptions? options = null) : base(options ?? new ClientOptions()) {
         }
         public async Task<bool> ConnectAsync(string ServerHost, int ServerPort, bool Ssl = false) {
             // Return failure if already connected
@@ -69,10 +69,9 @@ namespace TCPMaid {
                 OnReceive?.Invoke(Message);
             };
             // Listen to server
-            _ = ListenForTCPMessages(Server);
-            _ = ListenForUDPMessages(Server);
+            _ = ListenAsync(Server);
             // Start measuring ping
-            _ = StartPingPong(Server);
+            _ = PingPongAsync(Server);
             // Invoke connect event
             OnConnect?.Invoke(Server);
             // Return success
@@ -83,7 +82,7 @@ namespace TCPMaid {
             Server?.DisconnectAsync().Wait();
         }
     }
-    public sealed class ClientOptions : BaseOptions {
+    public sealed class ClientOptions : Options {
             
     }
 }
