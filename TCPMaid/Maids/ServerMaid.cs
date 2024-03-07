@@ -2,7 +2,6 @@
 using System.Threading.Tasks;
 using System.Collections.Generic;
 using System.Collections.Concurrent;
-using System.Linq;
 using System.Net.Sockets;
 using System.Net.Security;
 using System.Security.Cryptography.X509Certificates;
@@ -138,14 +137,20 @@ namespace TCPMaid {
         }
     }
     public sealed class ServerOptions : Options {
-        /// <summary>The certificate used for encryption. Ensure the client has SSL enabled.<br/>
-        /// Default: <see langword="null"/></summary>
+        /// <summary>
+        /// The certificate used for encryption. Ensure the client has SSL enabled.<br/>
+        /// Default: <see langword="null"/>
+        /// </summary>
         public X509Certificate2? Certificate = null;
-        /// <summary>The maximum number of clients that can connect to the server at once.<br/>
-        /// Default: <see langword="null"/></summary>
+        /// <summary>
+        /// The maximum number of clients that can connect to the server at once.<br/>
+        /// Default: <see langword="null"/>
+        /// </summary>
         public int? MaxClients = null;
-        /// <summary>The maximum number of pending bytes from a client before it is disconnected.<br/>
-        /// Default: 2MB</summary>
-        public int MaxPendingSize = 2_000_000;
+        /// <summary>
+        /// The maximum number of pending bytes from a client before it is disconnected.<br/>
+        /// Default: 3MB
+        /// </summary>
+        public int MaxPendingSize = 3_000_000;
     }
 }

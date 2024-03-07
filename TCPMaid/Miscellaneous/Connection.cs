@@ -12,15 +12,25 @@ using System.Linq;
 
 namespace TCPMaid {
     public sealed class Connection : IDisposable {
-        /// <summary>The maid this connection belongs to.</summary>
+        /// <summary>
+        /// The maid this connection belongs to.
+        /// </summary>
         public readonly Maid Maid;
-        /// <summary>On the server, this is the remote client. On the client, this is the local client.</summary>
+        /// <summary>
+        /// On the server, this is the remote client. On the client, this is the local client.
+        /// </summary>
         public readonly TcpClient Client;
-        /// <summary>If the connection is encrypted, this is an <see cref="SslStream"/> that wraps the <see cref="NetworkStream"/>. Otherwise, it's the <see cref="NetworkStream"/>.</summary>
+        /// <summary>
+        /// A thread-safe <see cref="SslStream"/> or <see cref="NetworkStream"/>.
+        /// </summary>
         public readonly Stream Stream;
-        /// <summary>The IP address and port of the remote connection.</summary>
+        /// <summary>
+        /// The IP address and port of the remote connection.
+        /// </summary>
         public readonly IPEndPoint RemotePoint;
-        /// <summary>The IP address and port of the local connection.</summary>
+        /// <summary>
+        /// The IP address and port of the local connection.
+        /// </summary>
         public readonly IPEndPoint LocalPoint;
 
         public bool Connected { get; private set; } = true;
@@ -30,13 +40,12 @@ namespace TCPMaid {
         public event Action<string, bool>? OnDisconnect;
         public event Action<Message>? OnReceive;
 
-        private readonly SemaphoreSlim NetworkSemaphore = new(1, 1);
         private static ulong LastMessageId;
 
         internal Connection(Maid maid, TcpClient client, Stream stream) {
             Maid = maid;
             Client = client;
-            Stream = stream;
+            Stream = Stream.Synchronized(stream);
             RemotePoint = (IPEndPoint)Client.Client.RemoteEndPoint!;
             LocalPoint = (IPEndPoint)Client.Client.LocalEndPoint!;
 
@@ -56,17 +65,8 @@ namespace TCPMaid {
                 for (int i = 0; i < Packets.Length; i++) {
                     // Await send packet message
                     if (i != 0) await WaitAsync<NextFragmentMessage>(Message => Message.MessageID == MessageId);
-
-                    // Await semaphore
-                    await NetworkSemaphore.WaitAsync();
-                    try {
-                        // Send packet
-                        await Stream.WriteAsync(Packets[i]);
-                    }
-                    finally {
-                        // Release semaphore
-                        NetworkSemaphore.Release();
-                    }
+                    // Send packet
+                    await Stream.WriteAsync(Packets[i]);
                 }
                 // Send success!
                 return true;
@@ -142,8 +142,6 @@ namespace TCPMaid {
             Client.Close();
             // Close stream
             Stream.Dispose();
-            // Dispose semaphore
-            NetworkSemaphore.Dispose();
         }
 
         private async Task PingPongAsync() {
@@ -189,7 +187,7 @@ namespace TCPMaid {
                         // Check if total exceeds limit
                         if (PendingSize > ServerOptions.MaxPendingSize) {
                             // Disconnect client for using too much memory
-                            await DisconnectAsync(DisconnectReason.HighMemoryUsage);
+                            await DisconnectAsync(DisconnectReason.MemoryUsage);
                             return;
                         }
                     }
@@ -249,8 +247,7 @@ namespace TCPMaid {
                 }
             }
             // Timeout - close connection
-            catch (OperationCanceledException ex) {
-                _ = ex;
+            catch (OperationCanceledException) {
                 await DisconnectAsync(DisconnectReason.Timeout);
                 return;
             }

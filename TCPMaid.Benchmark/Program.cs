@@ -32,7 +32,7 @@ while (true) {
         }
     };
     await Client.ConnectAsync("127.0.0.1", 12345);
-    await Task.Delay(1000);
+    //await Task.Delay(1000);
 }
 
 [MemoryPackable]

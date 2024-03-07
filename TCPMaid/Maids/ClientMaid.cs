@@ -83,8 +83,10 @@ namespace TCPMaid {
         }
     }
     public sealed class ClientOptions : Options {
-        /// <summary>Whether to encrypt the connection using the server certificate.<br/>
-        /// Default: <see langword="false"/></summary>
+        /// <summary>
+        /// If <see langword="true"/>, use the server certificate to encrypt the connection.<br/>
+        /// Default: <see langword="false"/>
+        /// </summary>
         public bool SSL = false;
     }
 }

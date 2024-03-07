@@ -13,6 +13,6 @@
         /// <summary>The server is shutting down.</summary>
         public const string ServerShutdown = "The server is shutting down.";
         /// <summary>The client is using too much memory on the server.</summary>
-        public const string HighMemoryUsage = "The client exceeded the server memory limit.";
+        public const string MemoryUsage = "The client exceeded the server memory limit.";
     }
 }

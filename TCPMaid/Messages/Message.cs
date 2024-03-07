@@ -25,10 +25,9 @@ namespace TCPMaid {
             // Create message bytes
             return Concat(MessageNameLengthBytes, MessageNameBytes, MessageBytes);
         }
-        public bool Internal => this is DisconnectMessage or NextFragmentMessage or PingRequest or PingResponse;
         public static Message FromBytes(byte[] Bytes) {
             // Get message name length
-            int MessageNameLength = BitConverter.ToInt32(Bytes.AsSpan(0, 4));
+            int MessageNameLength = BitConverter.ToInt32(Bytes.AsSpan(0, sizeof(int)));
             // Get message name
             string MessageName = Encoding.UTF8.GetString(Bytes[sizeof(int)..(sizeof(int) + MessageNameLength)]);
             // Get message bytes
@@ -38,6 +37,10 @@ namespace TCPMaid {
             // Create message
             return (Message)MemoryPackSerializer.Deserialize(MessageType, MessageBytes)!;
         }
+
+        [MemoryPackIgnore]
+        public bool Internal => this is DisconnectMessage or NextFragmentMessage or PingRequest or PingResponse;
+
         public static Type? GetMessageTypeFromName(string Name) {
             MessageTypes.TryGetValue(Name, out Type? Type);
             return Type;

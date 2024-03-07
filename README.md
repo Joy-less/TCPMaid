@@ -10,7 +10,6 @@ TCPMaid makes it easy to setup a robust client & server, send messages and reque
 
 ## Features
 - Easy client & server setup
-- Supports TCP and UDP
 - Supports SSL encryption and certificates
 - Automatically serialises messages
 - Send requests and await a response
@@ -18,20 +17,20 @@ TCPMaid makes it easy to setup a robust client & server, send messages and reque
 - Supports IPv4 and IPv6
 
 ## Dependencies
-- [Newtonsoft.Json](https://www.newtonsoft.com/json)
+- [MemoryPack](https://github.com/Cysharp/MemoryPack)
 
 ## Example
 
 ```cs
 public static void Server() {
     // Start server on port 5000
-    TCPMaidServer Server = new(5000);
-    Server.Start();
+    ServerMaid Server = new();
+    Server.Start(5000);
 
     // Listen to connect event
     Server.OnConnect += OnConnect;
     Server.OnReceive += OnReceive;
-    
+
     // Events
     void OnConnect(Connection Client) {
         Console.WriteLine("Hi, client!");
@@ -46,19 +45,20 @@ public static void Server() {
 ```cs
 public static async void Client() {
     // Connect client to server
-    TCPMaidClient Client = new();
+    ClientMaid Client = new();
     await Client.ConnectAsync("localhost", 5000);
 
     // Say hello to server
-    await Client.Server!.SendAsync(new ExampleMessage("hello server!"));
+    await Client.Connection!.SendAsync(new ExampleMessage("hello server!"));
 }
 ```
 ```cs
-public class ExampleMessage : Message {
-    [JsonProperty] public readonly string ExampleText;
-    
-    public ExampleMessage(string example_text) {
-        ExampleText = example_text;
+[MemoryPackable]
+public partial class ExampleMessage : Message {
+    public readonly string ExampleText;
+
+    public ExampleMessage(string ExampleText) {
+        this.ExampleText = ExampleText;
     }
 }
 ```
