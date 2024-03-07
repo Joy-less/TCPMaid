@@ -23,7 +23,7 @@
         /// </summary>
         public int MaxFragmentSize = 1_000_000;
         /// <summary>
-        /// How many seconds before sending another <see cref="PingRequest"/> to measure the connection's latency and prevent a timeout.<br/>
+        /// How many seconds before sending another <see cref="PingRequest"/> to measure the channel's latency and prevent a timeout.<br/>
         /// Default: 1
         /// </summary>
         public double PingInterval = 1;

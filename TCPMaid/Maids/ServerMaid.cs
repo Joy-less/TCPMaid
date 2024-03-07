@@ -13,12 +13,12 @@ namespace TCPMaid {
 
         public event Action? OnStart;
         public event Action? OnStop;
-        public event Action<Connection>? OnConnect;
-        public event Action<Connection, string, bool>? OnDisconnect;
-        public event Action<Connection, Message>? OnReceive;
+        public event Action<Channel>? OnConnect;
+        public event Action<Channel, string, bool>? OnDisconnect;
+        public event Action<Channel, Message>? OnReceive;
 
         private TcpListener? Listener;
-        private readonly ConcurrentDictionary<Connection, byte> Connections = new();
+        private readonly ConcurrentDictionary<Channel, byte> Channels = new();
 
         public ServerMaid(ServerOptions? options = null) : base(options ?? new ServerOptions()) {
         }
@@ -48,18 +48,18 @@ namespace TCPMaid {
             // Invoke stop event
             OnStop?.Invoke();
         }
-        public async Task BroadcastAsync(Message Message, Connection? Exclude = null, Predicate<Connection>? ExcludeWhere = null) {
+        public async Task BroadcastAsync(Message Message, Channel? Exclude = null, Predicate<Channel>? ExcludeWhere = null) {
             // Send message to each client
             await EachClientAsync(async Client => await Client.SendAsync(Message), Exclude, ExcludeWhere);
         }
-        public async Task DisconnectAllAsync(string Reason = DisconnectReason.None, Connection? Exclude = null, Predicate<Connection>? ExcludeWhere = null) {
+        public async Task DisconnectAllAsync(string Reason = DisconnectReason.None, Channel? Exclude = null, Predicate<Channel>? ExcludeWhere = null) {
             // Disconnect each client
             await EachClientAsync(async Client => await Client.DisconnectAsync(Reason), Exclude, ExcludeWhere);
         }
-        public async Task EachClientAsync(Func<Connection, Task> Action, Connection? Exclude, Predicate<Connection>? ExcludeWhere) {
+        public async Task EachClientAsync(Func<Channel, Task> Action, Channel? Exclude, Predicate<Channel>? ExcludeWhere) {
             // Start action for each client
             List<Task> Tasks = new();
-            foreach (Connection Client in Clients) {
+            foreach (Channel Client in Clients) {
                 if (Client != Exclude && (ExcludeWhere is null || !ExcludeWhere(Client))) {
                     Tasks.Add(Action(Client));
                 }
@@ -67,7 +67,7 @@ namespace TCPMaid {
             // Wait until all actions are complete
             await Task.WhenAll(Tasks);
         }
-        public ICollection<Connection> Clients => Connections.Keys;
+        public ICollection<Channel> Clients => Channels.Keys;
         
         private async Task AcceptAsync() {
             // Accept TCP client
@@ -75,10 +75,10 @@ namespace TCPMaid {
             // Accept another TCP client
             _ = AcceptAsync();
 
-            // Create connection
+            // Create channel
             NetworkStream? NetworkStream = null;
             SslStream? SSLStream = null;
-            Connection? Connection = null;
+            Channel? Channel = null;
             try {
                 // Get the network stream
                 NetworkStream = TCPClient.GetStream();
@@ -89,48 +89,48 @@ namespace TCPMaid {
                     SSLStream = new SslStream(NetworkStream, false);
                     // Authenticate stream
                     await SSLStream.AuthenticateAsServerAsync(Certificate, clientCertificateRequired: false, checkCertificateRevocation: true);
-                    // Create encrypted connection
-                    Connection = new Connection(this, TCPClient, SSLStream);
+                    // Create encrypted channel
+                    Channel = new Channel(this, TCPClient, SSLStream);
                 }
                 // Plain
                 else {
-                    // Create plain connection
-                    Connection = new Connection(this, TCPClient, NetworkStream);
+                    // Create plain channel
+                    Channel = new Channel(this, TCPClient, NetworkStream);
                 }
             }
-            // Failed to create connection
+            // Failed to create channel
             catch (Exception) {
                 // Dispose objects
                 TCPClient?.Dispose();
                 NetworkStream?.Dispose();
                 SSLStream?.Dispose();
-                Connection?.Dispose();
+                Channel?.Dispose();
                 // Return failure
                 return;
             }
 
             // Disconnect if there are too many clients
             if (Options.MaxClients is not null && Clients.Count >= Options.MaxClients) {
-                await Connection.DisconnectAsync(DisconnectReason.TooManyClients);
+                await Channel.DisconnectAsync(DisconnectReason.TooManyClients);
                 return;
             }
 
             // Listen to disconnect event
-            Connection.OnDisconnect += (Reason, ByRemote) => {
-                // Remove client from connections
-                Connections.TryRemove(Connection, out _);
+            Channel.OnDisconnect += (Reason, ByRemote) => {
+                // Remove client from channels
+                Channels.TryRemove(Channel, out _);
                 // Invoke disconnect event
-                OnDisconnect?.Invoke(Connection, Reason, ByRemote);
+                OnDisconnect?.Invoke(Channel, Reason, ByRemote);
             };
             // Listen to receive event
-            Connection.OnReceive += (Message) => {
+            Channel.OnReceive += (Message) => {
                 // Invoke receive event
-                OnReceive?.Invoke(Connection, Message);
+                OnReceive?.Invoke(Channel, Message);
             };
-            // Add client to connections
-            Connections.TryAdd(Connection, 0);
+            // Add client to channels
+            Channels.TryAdd(Channel, 0);
             // Invoke connect event
-            OnConnect?.Invoke(Connection);
+            OnConnect?.Invoke(Channel);
         }
         void IDisposable.Dispose() {
             Stop();

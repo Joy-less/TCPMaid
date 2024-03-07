@@ -3,10 +3,10 @@ using MemoryPack;
 
 // Initialise server
 ServerMaid Server = new();
-Server.OnConnect += (Connection) => {
+Server.OnConnect += (Channel) => {
     Console.WriteLine($"{Server.Clients.Count} clients.");
 };
-Server.OnDisconnect += (Connection, Reason, ByRemote) => {
+Server.OnDisconnect += (Channel, Reason, ByRemote) => {
     Console.WriteLine($"Disconnected: {Reason}, {ByRemote}");
 };
 Server.Start(12345);
@@ -23,7 +23,7 @@ _ = Task.Run(async () => {
 // Connect clients
 while (true) {
     ClientMaid Client = new();
-    Client.OnConnect += (Connection) => {
+    Client.OnConnect += (Channel) => {
         Console.WriteLine("Connected!");
     };
     Client.OnReceive += (Message) => {

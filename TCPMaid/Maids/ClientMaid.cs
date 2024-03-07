@@ -6,10 +6,10 @@ using System.Net.Security;
 namespace TCPMaid {
     public sealed class ClientMaid : Maid, IDisposable {
         public new ClientOptions Options => (ClientOptions)base.Options;
-        public bool Connected => Connection is not null && Connection.Connected;
-        public Connection? Connection { get; private set; }
+        public bool Connected => Channel is not null && Channel.Connected;
+        public Channel? Channel { get; private set; }
 
-        public event Action<Connection>? OnConnect;
+        public event Action<Channel>? OnConnect;
         public event Action<string, bool>? OnDisconnect;
         public event Action<Message>? OnReceive;
 
@@ -19,11 +19,10 @@ namespace TCPMaid {
             // Fail if already connected
             if (Connected) return false;
             
-            // Create connection
+            // Create channel
             TcpClient? TCPClient = null;
             NetworkStream? NetworkStream = null;
             SslStream? SSLStream = null;
-            Connection? Connection = null;
             try {
                 // Create TCPClient
                 TCPClient = new TcpClient() { NoDelay = true };
@@ -38,48 +37,47 @@ namespace TCPMaid {
                     SSLStream = new SslStream(NetworkStream, false);
                     // Authenticate stream
                     await SSLStream.AuthenticateAsClientAsync(ServerAddress);
-                    // Create encrypted connection
-                    Connection = new Connection(this, TCPClient, SSLStream);
+                    // Create encrypted channel
+                    Channel = new Channel(this, TCPClient, SSLStream);
                 }
                 // Plain
                 else {
-                    // Create plain connection
-                    Connection = new Connection(this, TCPClient, NetworkStream);
+                    // Create plain channel
+                    Channel = new Channel(this, TCPClient, NetworkStream);
                 }
             }
-            // Failed to create connection
+            // Failed to create channel
             catch (Exception) {
                 // Dispose objects
                 TCPClient?.Dispose();
                 NetworkStream?.Dispose();
                 SSLStream?.Dispose();
-                Connection?.Dispose();
+                Channel?.Dispose();
+                Channel = null;
                 // Return failure
                 return false;
             }
 
             // Listen to disconnect event
-            Connection.OnDisconnect += (Reason, ByRemote) => {
-                // Remove connection
-                this.Connection = null;
+            Channel.OnDisconnect += (Reason, ByRemote) => {
+                // Remove channel
+                Channel = null;
                 // Invoke disconnect event
                 OnDisconnect?.Invoke(Reason, ByRemote);
             };
             // Listen to receive event
-            Connection.OnReceive += (Message) => {
+            Channel.OnReceive += (Message) => {
                 // Invoke receive event
                 OnReceive?.Invoke(Message);
             };
-            // Set connection field
-            this.Connection = Connection;
             // Invoke connect event
-            OnConnect?.Invoke(Connection);
+            OnConnect?.Invoke(Channel);
             // Return success
             return true;
         }
 
         void IDisposable.Dispose() {
-            _ = Connection?.DisconnectAsync();
+            _ = Channel?.DisconnectAsync();
         }
     }
     public sealed class ClientOptions : Options {

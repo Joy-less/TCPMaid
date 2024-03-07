@@ -32,10 +32,10 @@ public static void Server() {
     Server.OnReceive += OnReceive;
 
     // Events
-    void OnConnect(Connection Client) {
+    void OnConnect(Channel Client) {
         Console.WriteLine("Hi, client!");
     }
-    void OnReceive(Connection Client, Message Message) {
+    void OnReceive(Channel Client, Message Message) {
         if (Message is ExampleMessage ExampleMessage) {
             Console.WriteLine($"Received '{ExampleMessage.ExampleText}' from client!");
         }
@@ -49,7 +49,7 @@ public static async void Client() {
     await Client.ConnectAsync("localhost", 5000);
 
     // Say hello to server
-    await Client.Connection!.SendAsync(new ExampleMessage("hello server!"));
+    await Client.Channel!.SendAsync(new ExampleMessage("hello server!"));
 }
 ```
 ```cs

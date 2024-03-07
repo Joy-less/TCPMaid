@@ -1,19 +1,19 @@
 ﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Collections.Generic;
+using System.Linq;
 using System.Diagnostics;
 using System.IO;
 using System.Net;
 using System.Net.Sockets;
 using System.Net.Security;
 using static TCPMaid.Extensions;
-using System.Collections.Generic;
-using System.Linq;
 
 namespace TCPMaid {
-    public sealed class Connection : IDisposable {
+    public sealed class Channel : IDisposable {
         /// <summary>
-        /// The maid this connection belongs to.
+        /// The maid this channel belongs to.
         /// </summary>
         public readonly Maid Maid;
         /// <summary>
@@ -42,7 +42,7 @@ namespace TCPMaid {
 
         private static ulong LastMessageId;
 
-        internal Connection(Maid maid, TcpClient client, Stream stream) {
+        internal Channel(Maid maid, TcpClient client, Stream stream) {
             Maid = maid;
             Client = client;
             Stream = Stream.Synchronized(stream);
@@ -246,12 +246,12 @@ namespace TCPMaid {
                     }
                 }
             }
-            // Timeout - close connection
+            // Timeout - close channel
             catch (OperationCanceledException) {
                 await DisconnectAsync(DisconnectReason.Timeout);
                 return;
             }
-            // Disconnected - close connection
+            // Disconnected - close channel
             catch (Exception) {
                 await DisconnectAsync();
                 return;
