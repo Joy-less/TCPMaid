@@ -12,8 +12,8 @@ TCPMaid makes it easy to setup a robust client & server, send messages and reque
 - Easy client & server setup
 - Supports SSL encryption and certificates
 - Automatically serialises messages
-- Send requests and await a response
 - Automatically fragments large messages
+- Send requests and await a response
 - Supports IPv4 and IPv6
 
 ## Dependencies
@@ -27,7 +27,7 @@ public static void Server() {
     ServerMaid Server = new();
     Server.Start(5000);
 
-    // Listen to connect event
+    // Listen to events
     Server.OnConnect += OnConnect;
     Server.OnReceive += OnReceive;
 
