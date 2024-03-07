@@ -49,8 +49,8 @@ namespace TCPMaid {
             RemotePoint = (IPEndPoint)Client.Client.RemoteEndPoint!;
             LocalPoint = (IPEndPoint)Client.Client.LocalEndPoint!;
 
-            _ = ListenAsync();
             _ = PingPongAsync();
+            _ = ListenAsync();
         }
         public async Task<bool> SendAsync(Message Message) {
             // Generate message ID

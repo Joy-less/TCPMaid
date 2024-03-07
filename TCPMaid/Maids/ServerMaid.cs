@@ -56,7 +56,7 @@ namespace TCPMaid {
             // Disconnect each client
             await EachClientAsync(async Client => await Client.DisconnectAsync(Reason), Exclude, ExcludeWhere);
         }
-        private async Task EachClientAsync(Func<Connection, Task> Action, Connection? Exclude, Predicate<Connection>? ExcludeWhere) {
+        public async Task EachClientAsync(Func<Connection, Task> Action, Connection? Exclude, Predicate<Connection>? ExcludeWhere) {
             // Start action for each client
             List<Task> Tasks = new();
             foreach (Connection Client in Clients) {
