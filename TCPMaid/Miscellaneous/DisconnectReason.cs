@@ -1,4 +1,7 @@
 ﻿namespace TCPMaid {
+    /// <summary>
+    /// A collection of common disconnect reasons.
+    /// </summary>
     public static class DisconnectReason {
         /// <summary>The disconnect reason is unknown.</summary>
         public const string None = "No reason given.";
@@ -10,8 +13,8 @@
         public const string Kicked = "Kicked by the server.";
         /// <summary>The client is closing or logging out.</summary>
         public const string ClientShutdown = "The client is closing.";
-        /// <summary>The server is shutting down.</summary>
-        public const string ServerShutdown = "The server is shutting down.";
+        /// <summary>The server is stopping.</summary>
+        public const string ServerShutdown = "The server is closing.";
         /// <summary>The client is using too much memory on the server.</summary>
         public const string MemoryUsage = "The client exceeded the server memory limit.";
     }

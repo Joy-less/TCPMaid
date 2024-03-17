@@ -7,21 +7,51 @@ using System.Net.Security;
 using System.Security.Cryptography.X509Certificates;
 
 namespace TCPMaid {
+    /// <summary>
+    /// A maid that helps setup channels to multiple clients.
+    /// </summary>
     public sealed class ServerMaid : Maid, IDisposable {
+        /// <summary>
+        /// The preferences for this maid.
+        /// </summary>
         public new ServerOptions Options => (ServerOptions)base.Options;
+        /// <summary>
+        /// Whether the server is started.
+        /// </summary>
         public bool Running { get; private set; }
 
+        /// <summary>
+        /// Triggers when the server is started.
+        /// </summary>
         public event Action? OnStart;
+        /// <summary>
+        /// Triggers when the server is stopped.
+        /// </summary>
         public event Action? OnStop;
+        /// <summary>
+        /// Triggers when a new channel is connected.
+        /// </summary>
         public event Action<Channel>? OnConnect;
+        /// <summary>
+        /// Triggers when a channel is abandoned.
+        /// </summary>
         public event Action<Channel, string, bool>? OnDisconnect;
+        /// <summary>
+        /// Triggers when a channel receives a message.
+        /// </summary>
         public event Action<Channel, Message>? OnReceive;
 
         private TcpListener? Listener;
         private readonly ConcurrentDictionary<Channel, byte> Channels = new();
 
+        /// <summary>
+        /// Creates a new server maid with the given options.
+        /// </summary>
         public ServerMaid(ServerOptions? options = null) : base(options ?? new ServerOptions()) {
         }
+        /// <summary>
+        /// Starts listening for clients on the given port, unless already running.
+        /// </summary>
         public void Start(int Port) {
             // Ensure server is not running
             if (Running) return;
@@ -36,6 +66,9 @@ namespace TCPMaid {
             // Invoke start event
             OnStart?.Invoke();
         }
+        /// <summary>
+        /// Stops listening for clients and disconnects existing clients.
+        /// </summary>
         public void Stop() {
             // Mark server as not running
             if (!Running) return;
@@ -48,14 +81,23 @@ namespace TCPMaid {
             // Invoke stop event
             OnStop?.Invoke();
         }
+        /// <summary>
+        /// Sends a message to every connected client.
+        /// </summary>
         public async Task BroadcastAsync(Message Message, Channel? Exclude = null, Predicate<Channel>? ExcludeWhere = null) {
             // Send message to each client
             await EachClientAsync(async Client => await Client.SendAsync(Message), Exclude, ExcludeWhere);
         }
+        /// <summary>
+        /// Disconnects every connected client.
+        /// </summary>
         public async Task DisconnectAllAsync(string Reason = DisconnectReason.None, Channel? Exclude = null, Predicate<Channel>? ExcludeWhere = null) {
             // Disconnect each client
             await EachClientAsync(async Client => await Client.DisconnectAsync(Reason), Exclude, ExcludeWhere);
         }
+        /// <summary>
+        /// Runs an asynchronous action for every connected client.
+        /// </summary>
         public async Task EachClientAsync(Func<Channel, Task> Action, Channel? Exclude, Predicate<Channel>? ExcludeWhere) {
             // Start action for each client
             List<Task> Tasks = new();
@@ -67,6 +109,9 @@ namespace TCPMaid {
             // Wait until all actions are complete
             await Task.WhenAll(Tasks);
         }
+        /// <summary>
+        /// Gets a collection of every connected client.
+        /// </summary>
         public ICollection<Channel> Clients => Channels.Keys;
         
         private async Task AcceptAsync() {
@@ -136,6 +181,9 @@ namespace TCPMaid {
             Stop();
         }
     }
+    /// <summary>
+    /// The preferences for a server maid.
+    /// </summary>
     public sealed class ServerOptions : Options {
         /// <summary>
         /// The certificate used for encryption. Ensure the client has SSL enabled.<br/>

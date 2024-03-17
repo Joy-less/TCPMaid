@@ -7,12 +7,21 @@ using MemoryPack;
 using static TCPMaid.Extensions;
 
 namespace TCPMaid {
+    /// <summary>
+    /// The base class for messages that can be serialised and sent across a channel. Should not be reused.
+    /// </summary>
     public abstract class Message {
+        /// <summary>
+        /// The generated identifier for the message.
+        /// </summary>
         public ulong ID = Interlocked.Increment(ref LastID);
 
         private static readonly Dictionary<string, Type> MessageTypes = GetMessageTypes();
         private static ulong LastID;
 
+        /// <summary>
+        /// Serialises the message and its name as an array of bytes.
+        /// </summary>
         public byte[] ToBytes() {
             // Get message type
             Type MessageType = GetType();
@@ -25,6 +34,9 @@ namespace TCPMaid {
             // Create message bytes
             return Concat(MessageNameLengthBytes, MessageNameBytes, MessageBytes);
         }
+        /// <summary>
+        /// Deserialises an array of bytes as a message.
+        /// </summary>
         public static Message FromBytes(byte[] Bytes) {
             // Get message name length
             int MessageNameLength = BitConverter.ToInt32(Bytes.AsSpan(0, sizeof(int)));
@@ -38,9 +50,15 @@ namespace TCPMaid {
             return (Message)MemoryPackSerializer.Deserialize(MessageType, MessageBytes)!;
         }
 
+        /// <summary>
+        /// Whether the message is only for internal use.
+        /// </summary>
         [MemoryPackIgnore]
         public bool Internal => this is DisconnectMessage or NextFragmentMessage or PingRequest or PingResponse;
 
+        /// <summary>
+        /// Searches the cached available assemblies for a message type with the given name.
+        /// </summary>
         public static Type? GetMessageTypeFromName(string Name) {
             MessageTypes.TryGetValue(Name, out Type? Type);
             return Type;
@@ -52,10 +70,22 @@ namespace TCPMaid {
             ).ToDictionary(Type => Type.Name);
         }
     }
+    /// <summary>
+    /// The base class for messages that expect a response. Should not be reused.
+    /// </summary>
     public abstract class Request : Message {
     }
+    /// <summary>
+    /// The base class for messages that respond to a request. Should not be reused.
+    /// </summary>
     public abstract class Response : Message {
+        /// <summary>
+        /// The ID of the request this is a response to.
+        /// </summary>
         public readonly ulong RequestID;
+        /// <summary>
+        /// Creates a new response for the given request ID.
+        /// </summary>
         public Response(ulong RequestID) {
             this.RequestID = RequestID;
         }

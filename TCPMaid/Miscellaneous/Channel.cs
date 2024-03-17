@@ -11,6 +11,9 @@ using System.Net.Security;
 using static TCPMaid.Extensions;
 
 namespace TCPMaid {
+    /// <summary>
+    /// A TCP connection to a remote client or server.
+    /// </summary>
     public sealed class Channel : IDisposable {
         /// <summary>
         /// The maid this channel belongs to.
@@ -33,16 +36,34 @@ namespace TCPMaid {
         /// </summary>
         public readonly IPEndPoint LocalPoint;
 
+        /// <summary>
+        /// Whether the channel is ready to send and receive messages.
+        /// </summary>
         public bool Connected { get; private set; } = true;
+        /// <summary>
+        /// The time in seconds for a message to reach the remote, estimated by half of the last <see cref="PingRequest"/>'s round trip time.
+        /// </summary>
         public double Latency { get; private set; } = -1;
+        /// <summary>
+        /// Whether the server is using a certificate to encrypt the channel stream.
+        /// </summary>
         public bool Encrypted => Stream is SslStream;
 
+        /// <summary>
+        /// Triggers when the channel is abandoned. (Reason, ByRemote)
+        /// </summary>
         public event Action<string, bool>? OnDisconnect;
+        /// <summary>
+        /// Triggers when the channel receives a message.
+        /// </summary>
         public event Action<Message>? OnReceive;
 
         private static ulong LastMessageId;
 
-        internal Channel(Maid maid, TcpClient client, Stream stream) {
+        /// <summary>
+        /// Creates a new channel that listens to the given stream.
+        /// </summary>
+        public Channel(Maid maid, TcpClient client, Stream stream) {
             Maid = maid;
             Client = client;
             Stream = Stream.Synchronized(stream);
@@ -52,6 +73,10 @@ namespace TCPMaid {
             _ = PingPongAsync();
             _ = ListenAsync();
         }
+        /// <summary>
+        /// Serialises and sends a message to the remote.
+        /// </summary>
+        /// <returns><see langword="true"/> if the message was sent successfully; <see langword="false"/> otherwise.</returns>
         public async Task<bool> SendAsync(Message Message) {
             // Generate message ID
             ulong MessageId = Interlocked.Increment(ref LastMessageId);
@@ -77,7 +102,11 @@ namespace TCPMaid {
                 return false;
             }
         }
-        public async Task<TResponse?> RequestAsync<TResponse>(Request Request, Predicate<TResponse>? Filter = null, CancellationToken CancelToken = default) where TResponse : Response {
+        /// <summary>
+        /// Serialises and sends a request to the remote and waits for a response.
+        /// </summary>
+        /// <returns>A <typeparamref name="TResponse"/>, or <see langword="null"/> if cancelled or the channel was disconnected.</returns>
+        public async Task<TResponse?> RequestAsync<TResponse>(Request Request, Predicate<TResponse>? Where = null, CancellationToken CancelToken = default) where TResponse : Response {
             // Send request
             bool Success = await SendAsync(Request);
             // Send failure
@@ -85,8 +114,12 @@ namespace TCPMaid {
                 return null;
             }
             // Return response
-            return await WaitAsync<TResponse>(Response => Response.RequestID == Request.ID && (Filter is null || Filter(Response)), CancelToken);
+            return await WaitAsync<TResponse>(Response => Response.RequestID == Request.ID && (Where is null || Where(Response)), CancelToken);
         }
+        /// <summary>
+        /// Waits for a message from the remote.
+        /// </summary>
+        /// <returns>A <typeparamref name="TMessage"/>, or <see langword="null"/> if cancelled or the channel was disconnected.</returns>
         public async Task<TMessage?> WaitAsync<TMessage>(Predicate<TMessage>? Where = null, CancellationToken CancelToken = default) where TMessage : Message {
             // Create return variable and receive signal
             TaskCompletionSource<TMessage?> OnComplete = new();
@@ -114,6 +147,10 @@ namespace TCPMaid {
             // Return the matched message
             return ReturnMessage;
         }
+        /// <summary>
+        /// Sends a <see cref="PingRequest"/> to the remote and waits for a <see cref="PingResponse"/>.
+        /// </summary>
+        /// <returns>Half of the round trip time.</returns>
         public async Task<double> PingAsync(CancellationToken CancelToken = default) {
             // Create timer
             Stopwatch Timer = Stopwatch.StartNew();
@@ -122,6 +159,9 @@ namespace TCPMaid {
             // Calculate round trip time
             return Latency = Timer.Elapsed.TotalSeconds / 2;
         }
+        /// <summary>
+        /// Closes the channel after sending the <paramref name="Reason"/>.
+        /// </summary>
         public async Task DisconnectAsync(string Reason = DisconnectReason.None, bool ByRemote = false, bool Silently = false) {
             // Debounce
             if (!Connected) return;
@@ -134,6 +174,9 @@ namespace TCPMaid {
             // Invoke disconnect event
             OnDisconnect?.Invoke(Reason, ByRemote);
         }
+        /// <summary>
+        /// Closes the channel without telling the remote or invoking the OnDisconnect event.
+        /// </summary>
         public void Dispose() {
             // Mark as disconnected
             if (!Connected) return;
