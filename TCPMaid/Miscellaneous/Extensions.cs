@@ -41,31 +41,22 @@ namespace TCPMaid {
             byte[][] Fragments = Fragment(Bytes, MaxFragmentSize);
             // Create packets array
             byte[][] Packets = new byte[Fragments.Length][];
-
-            // Create first packet
-            Packets[0] = Concat(
-                // Packet length
-                BitConverter.GetBytes(sizeof(ulong) + sizeof(int) + Bytes.Length),
-                // Message ID
-                BitConverter.GetBytes(Message.ID),
-                // Total message length
-                BitConverter.GetBytes(Bytes.Length),
-                // First fragment
-                Fragments[0]
-            );
-
-            // Create extra packets
-            for (int i = 1; i < Fragments.Length; i++) {
+            // Create each packet
+            for (int i = 0; i < Fragments.Length; i++) {
+                // Get current fragment
+                byte[] Fragment = Fragments[i];
+                // Build packet
                 Packets[i] = Concat(
                     // Packet length
-                    BitConverter.GetBytes(sizeof(ulong) + Bytes.Length),
+                    BitConverter.GetBytes(sizeof(ulong) + sizeof(int) + Fragment.Length),
                     // Message ID
                     BitConverter.GetBytes(Message.ID),
-                    // Fragment
-                    Fragments[i]
+                    // Total message length
+                    BitConverter.GetBytes(Bytes.Length),
+                    // Fragment data
+                    Fragment
                 );
             }
-
             // Return packets
             return Packets;
         }
@@ -74,7 +65,7 @@ namespace TCPMaid {
             byte[] ReceiveBuffer = ArrayPool<byte>.Shared.Rent(BufferSize);
             try {
                 // Read bytes into buffer
-                // Note: cancel token passed to Task.Run, because NetworkStream.ReadAsync's cancel token doesn't work
+                // Note: Cancel token passed to Task.Run, because NetworkStream.ReadAsync's cancel token doesn't work
                 int BytesRead = await Task.Run(async() => await Stream.ReadAsync(ReceiveBuffer), CancelToken);
                 // Return bytes
                 return ReceiveBuffer[..BytesRead];

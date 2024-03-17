@@ -58,8 +58,6 @@ namespace TCPMaid {
         /// </summary>
         public event Action<Message>? OnReceive;
 
-        private static ulong LastMessageId;
-
         /// <summary>
         /// Creates a new channel that listens to the given stream.
         /// </summary>
@@ -78,9 +76,8 @@ namespace TCPMaid {
         /// </summary>
         /// <returns><see langword="true"/> if the message was sent successfully; <see langword="false"/> otherwise.</returns>
         public async Task<bool> SendAsync(Message Message) {
-            // Generate message ID
-            ulong MessageId = Interlocked.Increment(ref LastMessageId);
-
+            // Get message ID
+            ulong MessageID = Message.ID;
             // Create packets from message bytes
             byte[][] Packets = CreatePackets(Message, Maid.Options.MaxFragmentSize);
 
@@ -89,7 +86,7 @@ namespace TCPMaid {
                 // Send packets
                 for (int i = 0; i < Packets.Length; i++) {
                     // Await send packet message
-                    if (i != 0) await WaitAsync<NextFragmentMessage>(Message => Message.MessageID == MessageId);
+                    if (i != 0) await WaitAsync<NextFragmentMessage>(NextFragmentMessage => NextFragmentMessage.MessageID == MessageID);
                     // Send packet
                     await Stream.WriteAsync(Packets[i]);
                 }
@@ -254,26 +251,27 @@ namespace TCPMaid {
                         // Remove length and fragment
                         PendingBytes.RemoveRange(0, sizeof(int) + FragmentLength);
 
-                        // Get fragment message ID
-                        ulong MessageID = BitConverter.ToUInt64(Fragment);
+                        // Get fragment data
+                        ulong MessageID = BitConverter.ToUInt64(Fragment, 0);
+                        int TotalMessageLength = BitConverter.ToInt32(Fragment, sizeof(ulong));
+                        byte[] FragmentData = Fragment[(sizeof(ulong) + sizeof(int))..];
 
                         // Existing message
                         if (PendingMessages.TryGetValue(MessageID, out PendingMessage? PendingMessage)) {
-                            // Add bytes to pending message
+                            // Update pending message
+                            PendingMessage.TotalMessageLength = TotalMessageLength;
                             PendingMessage.CurrentBytes = Concat(PendingMessage.CurrentBytes, Fragment[sizeof(ulong)..]);
                         }
+                        // New message
                         else {
                             // Create pending message
-                            PendingMessage = new PendingMessage(
-                                total_message_length: BitConverter.ToInt32(Fragment, sizeof(ulong)),
-                                initial_bytes: Fragment[(sizeof(ulong) + sizeof(int))..]
-                            );
+                            PendingMessage = new PendingMessage(TotalMessageLength, FragmentData);
                             // Add pending message
                             PendingMessages.Add(MessageID, PendingMessage);
                         }
-
+                        
                         // Ensure message is complete
-                        if (PendingMessage.Incomplete) {
+                        if (PendingMessage.IsIncomplete) {
                             // Ask for next fragment
                             _ = SendAsync(new NextFragmentMessage(MessageID));
                             break;
@@ -301,13 +299,13 @@ namespace TCPMaid {
             }
         }
         private sealed class PendingMessage {
-            public readonly int TotalMessageLength;
+            public int TotalMessageLength;
             public byte[] CurrentBytes;
             public PendingMessage(int total_message_length, byte[] initial_bytes) {
                 TotalMessageLength = total_message_length;
                 CurrentBytes = initial_bytes;
             }
-            public bool Incomplete => CurrentBytes.Length < TotalMessageLength;
+            public bool IsIncomplete => CurrentBytes.Length < TotalMessageLength;
         }
     }
 }
