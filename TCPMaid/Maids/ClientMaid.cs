@@ -1,6 +1,4 @@
-﻿using System;
-using System.Threading.Tasks;
-using System.Net.Sockets;
+﻿using System.Net.Sockets;
 using System.Net.Security;
 
 namespace TCPMaid {
