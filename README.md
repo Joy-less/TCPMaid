@@ -13,7 +13,7 @@ TCPMaid makes it easy to setup a robust client & server, send messages and reque
 - Supports SSL encryption and certificates
 - Automatically serialises messages
 - Automatically fragments large messages
-- Send requests and await a response
+- Supports requests and responses
 - Supports IPv4 and IPv6
 
 ## Dependencies
@@ -54,12 +54,8 @@ public static async void Client() {
 ```
 ```cs
 [MemoryPackable]
-public partial class ExampleMessage : Message {
-    public readonly string ExampleText;
-
-    public ExampleMessage(string ExampleText) {
-        this.ExampleText = ExampleText;
-    }
+public partial class ExampleMessage(string ExampleText) : Message {
+    public readonly string ExampleText = ExampleText;
 }
 ```
 #### Output
