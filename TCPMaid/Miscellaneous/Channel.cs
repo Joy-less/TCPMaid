@@ -202,8 +202,8 @@ namespace TCPMaid {
             };
 
             // Create collections for bytes waiting to be processed
-            List<byte> PendingBytes = new();
-            Dictionary<ulong, PendingMessage> PendingMessages = new();
+            List<byte> PendingBytes = [];
+            Dictionary<ulong, PendingMessage> PendingMessages = [];
 
             // Listen for incoming packets
             try {

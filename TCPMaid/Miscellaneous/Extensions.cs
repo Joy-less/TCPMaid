@@ -2,6 +2,9 @@
 
 namespace TCPMaid {
     internal static class Extensions {
+        /// <summary>
+        /// Merges multiple arrays into one array.
+        /// </summary>
         public static T[] Concat<T>(params T[][] Arrays) {
             // Create merged array
             int MergedLength = Arrays.Sum(Array => Array.Length);
@@ -14,6 +17,9 @@ namespace TCPMaid {
             }
             return MergedArray;
         }
+        /// <summary>
+        /// Breaks up an array into multiple arrays, each of the given size except the last.
+        /// </summary>
         public static T[][] Fragment<T>(T[] Array, int MaxFragmentSize) {
             // Create fragments array to store all fragments
             int FragmentsCount = (Array.Length + MaxFragmentSize - 1) / MaxFragmentSize;
@@ -29,6 +35,9 @@ namespace TCPMaid {
             }
             return Fragments;
         }
+        /// <summary>
+        /// Converts a message into an array of packets to be sent via the network stream.
+        /// </summary>
         public static byte[][] CreatePackets(Message Message, int MaxFragmentSize) {
             // Get bytes
             byte[] Bytes = Message.ToBytes();
@@ -55,12 +64,15 @@ namespace TCPMaid {
             // Return packets
             return Packets;
         }
+        /// <summary>
+        /// Reads bytes from a stream using a buffer of the given size.
+        /// </summary>
         public static async Task<byte[]> ReadBytesAsync(this Stream Stream, int BufferSize, CancellationToken CancelToken = default) {
             // Rent buffer
             byte[] ReceiveBuffer = ArrayPool<byte>.Shared.Rent(BufferSize);
             try {
                 // Read bytes into buffer
-                // Note: Cancel token passed to Task.Run, because NetworkStream.ReadAsync's cancel token doesn't work
+                // Note: cancel token is passed to Task.Run, because NetworkStream.ReadAsync's cancel token doesn't work.
                 int BytesRead = await Task.Run(async() => await Stream.ReadAsync(ReceiveBuffer), CancelToken);
                 // Return bytes
                 return ReceiveBuffer[..BytesRead];

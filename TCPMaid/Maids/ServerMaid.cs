@@ -97,7 +97,7 @@ namespace TCPMaid {
         /// </summary>
         public async Task EachClientAsync(Func<Channel, Task> Action, Channel? Exclude, Predicate<Channel>? ExcludeWhere) {
             // Start action for each client
-            List<Task> Tasks = new();
+            List<Task> Tasks = [];
             foreach (Channel Client in Clients) {
                 if (Client != Exclude && (ExcludeWhere is null || !ExcludeWhere(Client))) {
                     Tasks.Add(Action(Client));
