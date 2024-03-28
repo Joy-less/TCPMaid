@@ -1,4 +1,6 @@
-﻿using System.Runtime.CompilerServices;
+﻿#if NETSTANDARD
+
+using System.Runtime.CompilerServices;
 
 namespace TCPMaid {
     /// <summary>
@@ -30,3 +32,5 @@ namespace TCPMaid {
         }
     }
 }
+
+#endif
