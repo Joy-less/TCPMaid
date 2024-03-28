@@ -9,7 +9,7 @@
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
     <Title>TCPMaid</Title>
     <FileVersion></FileVersion>
-    <Version>2.1.1</Version>
+    <Version>2.2.0</Version>
     <Authors>Joyless</Authors>
     <PackageTags>TCP; Server; Client; Netcode; Networking; Multiplayer</PackageTags>
     <Description>An easy, powerful and lightweight TCP client/server in C#.</Description>
@@ -50,7 +50,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="MemoryPack" Version="1.10.0" />
+    <PackageReference Include="MemoryPack" Version="1.21.0" />
   </ItemGroup>
 
 </Project>
