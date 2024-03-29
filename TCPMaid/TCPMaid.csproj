@@ -10,9 +10,9 @@
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
     <Title>TCPMaid</Title>
     <FileVersion></FileVersion>
-    <Version>2.2.0</Version>
+    <Version>2.2.1</Version>
     <Authors>Joyless</Authors>
-    <PackageTags>TCP; Server; Client; Netcode; Networking; Multiplayer</PackageTags>
+    <PackageTags>TCP; Server; Client; Netcode; Networking; Multiplayer; SSL; TLS</PackageTags>
     <Description>An easy, powerful and lightweight TCP client/server in C#.</Description>
     <PackageProjectUrl>https://github.com/Joy-less/TCPMaid</PackageProjectUrl>
     <RepositoryUrl>https://github.com/Joy-less/TCPMaid</RepositoryUrl>

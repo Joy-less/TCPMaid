@@ -65,7 +65,7 @@ public sealed class ClientMaid : Maid, IDisposable {
                 // Create SSL stream
                 SSLStream = new SslStream(NetworkStream, false);
                 // Authenticate stream
-                await SSLStream.AuthenticateAsClientAsync(ServerAddress);
+                await SSLStream.AuthenticateAsClientAsync(Options.ServerName ?? ServerAddress);
                 // Create encrypted channel
                 Channel = new Channel(this, TCPClient, SSLStream);
             }
@@ -118,4 +118,9 @@ public sealed class ClientOptions : Options {
     /// Default: <see langword="false"/>
     /// </summary>
     public bool SSL = false;
+    /// <summary>
+    /// The common name of the server certificate. Defaults to the server address if <see langword="null"/>.<br/>
+    /// Default: <see langword="null"/>
+    /// </summary>
+    public string? ServerName = null;
 }
