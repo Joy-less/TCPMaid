@@ -111,7 +111,7 @@ public sealed class ServerMaid : Maid, IDisposable {
     /// Gets a collection of every connected client.
     /// </summary>
     public ICollection<Channel> Clients => Channels.Keys;
-        
+    
     private async Task AcceptAsync() {
         // Accept TCP client
         TcpClient TCPClient = await Listener!.AcceptTcpClientAsync();

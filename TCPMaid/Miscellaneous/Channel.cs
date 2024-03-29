@@ -32,7 +32,7 @@ public sealed class Channel : IDisposable {
     public readonly IPEndPoint LocalPoint;
 
     /// <summary>
-    /// Whether the channel is ready to send and receive messages.
+    /// Whether the channel is still open to send and receive messages.
     /// </summary>
     public bool Connected { get; private set; } = true;
     /// <summary>
@@ -142,7 +142,7 @@ public sealed class Channel : IDisposable {
     /// <summary>
     /// Sends a <see cref="PingRequest"/> to the remote and waits for a <see cref="PingResponse"/>.
     /// </summary>
-    /// <returns>Half of the round trip time.</returns>
+    /// <returns>An estimate of the channel's latency (half of the round trip time).</returns>
     public async Task<double> PingAsync(CancellationToken CancelToken = default) {
         // Create timer
         Stopwatch Timer = Stopwatch.StartNew();
@@ -152,7 +152,7 @@ public sealed class Channel : IDisposable {
         return Latency = Timer.Elapsed.TotalSeconds / 2;
     }
     /// <summary>
-    /// Closes the channel after sending the <paramref name="Reason"/>.
+    /// Sends the disconnect reason and disposes the channel.
     /// </summary>
     public async Task DisconnectAsync(string Reason = DisconnectReason.None, bool ByRemote = false, bool Silently = false) {
         // Debounce
@@ -161,7 +161,7 @@ public sealed class Channel : IDisposable {
         if (!Silently) {
             await SendAsync(new DisconnectMessage(Reason));
         }
-        // Dispose
+        // Dispose channel
         Dispose();
         // Invoke disconnect event
         OnDisconnect?.Invoke(Reason, ByRemote);
