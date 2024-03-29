@@ -34,13 +34,13 @@ public abstract class Message {
     /// <summary>
     /// Deserialises an array of bytes as a message.
     /// </summary>
-    public static Message FromBytes(byte[] Bytes) {
+    public static Message FromBytes(Span<byte> Bytes) {
         // Get message name length
-        int MessageNameLength = BitConverter.ToInt32(Bytes.AsSpan(0, sizeof(int)));
+        int MessageNameLength = BitConverter.ToInt32(Bytes[..sizeof(int)]);
         // Get message name
         string MessageName = Encoding.UTF8.GetString(Bytes[sizeof(int)..(sizeof(int) + MessageNameLength)]);
         // Get message bytes
-        byte[] MessageBytes = Bytes[(sizeof(int) + MessageNameLength)..];
+        Span<byte> MessageBytes = Bytes[(sizeof(int) + MessageNameLength)..];
         // Get message type from name
         Type MessageType = GetMessageTypeFromName(MessageName)!;
         // Create message
