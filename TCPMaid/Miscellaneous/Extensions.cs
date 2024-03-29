@@ -73,8 +73,8 @@ internal static class Extensions {
         byte[] ReceiveBuffer = ArrayPool<byte>.Shared.Rent(BufferSize);
         try {
             // Read bytes into buffer
-            // Note: cancel token is passed to Task.Run, because NetworkStream.ReadAsync's cancel token doesn't work.
-            int BytesRead = await Task.Run(async() => await Stream.ReadAsync(ReceiveBuffer), CancelToken);
+            // Note: cancel token is passed to Task.Run, because NetworkStream.ReadAsync's cancel token does nothing.
+            int BytesRead = await Task.Run(async() => await Stream.ReadAsync(ReceiveBuffer, CancelToken), CancelToken);
             // Return bytes
             return ReceiveBuffer[..BytesRead];
         }
