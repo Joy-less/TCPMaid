@@ -75,15 +75,9 @@ public abstract class Request : Message {
 /// <summary>
 /// The base class for messages that respond to a request. Should not be reused.
 /// </summary>
-public abstract class Response : Message {
+public abstract class Response(ulong RequestID) : Message {
     /// <summary>
     /// The ID of the request this is a response to.
     /// </summary>
-    public readonly ulong RequestID;
-    /// <summary>
-    /// Creates a new response for the given request ID.
-    /// </summary>
-    public Response(ulong RequestID) {
-        this.RequestID = RequestID;
-    }
+    public ulong RequestID = RequestID;
 }
