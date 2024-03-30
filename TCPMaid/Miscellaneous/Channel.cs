@@ -122,14 +122,17 @@ public sealed class Channel : IDisposable {
         if (!Success) {
             return null;
         }
-        // Listen for fragments
-        this.OnReceiveFragment += ReceiveFragment;
-        // Return response
-        TResponse? Response = await WaitAsync<TResponse>(Response => Response.RequestID == Request.ID, CancelToken);
-        // Stop listening for fragments
-        this.OnReceiveFragment -= ReceiveFragment;
-        // Return the response
-        return Response;
+        
+        try {
+            // Listen for fragments
+            this.OnReceiveFragment += ReceiveFragment;
+            // Return response
+            return await WaitAsync<TResponse>(Response => Response.RequestID == Request.ID, CancelToken);
+        }
+        finally {
+            // Stop listening for fragments
+            this.OnReceiveFragment -= ReceiveFragment;
+        }
     }
     /// <summary>
     /// Waits for a message from the remote.
@@ -150,18 +153,21 @@ public sealed class Channel : IDisposable {
         void CancelWait(string Reason, bool ByRemote) {
             OnComplete.TrySetResult(null);
         }
-        // Listen for disconnect
-        OnDisconnect += CancelWait;
-        // Listen for messages
-        OnReceive += Filter;
-        // Await a matching message
-        TMessage? ReturnMessage = await OnComplete.Task.WaitAsync(CancelToken);
-        // Stop listening for messages
-        OnReceive -= Filter;
-        // Stop listening for disconnect
-        OnDisconnect -= CancelWait;
-        // Return the matched message
-        return ReturnMessage;
+        
+        try {
+            // Listen for disconnect
+            OnDisconnect += CancelWait;
+            // Listen for messages
+            OnReceive += Filter;
+            // Await a matching message
+            return await OnComplete.Task.WaitAsync(CancelToken);
+        }
+        finally {
+            // Stop listening for messages
+            OnReceive -= Filter;
+            // Stop listening for disconnect
+            OnDisconnect -= CancelWait;
+        }
     }
     /// <summary>
     /// Sends a <see cref="PingRequest"/> to the remote and waits for a <see cref="PingResponse"/>.
