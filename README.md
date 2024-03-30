@@ -21,6 +21,18 @@ TCPMaid makes it easy to setup a robust client & server, send messages and reque
 
 ## Example
 
+#### Client
+```cs
+public static async void Client() {
+    // Connect client to server
+    ClientMaid Client = new();
+    await Client.ConnectAsync("localhost", 5000);
+
+    // Say hello to server
+    await Client.Channel!.SendAsync(new ExampleMessage("hello server!"));
+}
+```
+#### Server
 ```cs
 public static void Server() {
     // Start server on port 5000
@@ -42,16 +54,7 @@ public static void Server() {
     }
 }
 ```
-```cs
-public static async void Client() {
-    // Connect client to server
-    ClientMaid Client = new();
-    await Client.ConnectAsync("localhost", 5000);
-
-    // Say hello to server
-    await Client.Channel!.SendAsync(new ExampleMessage("hello server!"));
-}
-```
+#### Shared
 ```cs
 [MemoryPackable]
 public partial class ExampleMessage(string ExampleText) : Message {
@@ -62,4 +65,35 @@ public partial class ExampleMessage(string ExampleText) : Message {
 ```
 Hi, client!
 Received 'hello server!' from client!
+```
+
+## Requests
+
+#### Client
+```cs
+// Send an ExampleRequest and wait for an ExampleResponse with the same message ID
+ExampleResponse? Response = await Client.Channel!.RequestAsync<ExampleResponse>(new ExampleRequest());
+Console.WriteLine(Response!.ExampleText);
+```
+#### Server
+```cs
+Server.OnReceive += (Channel, Message) => {
+    if (Message is ExampleRequest ExampleRequest) {
+        _ = Channel.SendAsync(new ExampleResponse(ExampleRequest.ID, "Here's my response: -.-"));
+    }
+};
+```
+#### Shared
+```cs
+[MemoryPackable]
+public partial class ExampleRequest : Message {
+}
+[MemoryPackable]
+public partial class ExampleResponse(ulong ID, string ExampleText) : Message(ID) {
+    public readonly string ExampleText = ExampleText;
+}
+```
+#### Output
+```
+Here's my response: -.-
 ```
