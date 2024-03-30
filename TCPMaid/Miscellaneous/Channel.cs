@@ -40,6 +40,10 @@ public sealed class Channel : IDisposable {
     /// </summary>
     public double Latency { get; private set; } = -1;
     /// <summary>
+    /// The time in milliseconds for a message to reach the remote, estimated by half of the last <see cref="PingRequest"/>'s round trip time.
+    /// </summary>
+    public int LatencyMs => (int)Math.Round(Latency * 1000);
+    /// <summary>
     /// Whether the server is using a certificate to encrypt the channel stream.
     /// </summary>
     public bool Encrypted => Stream is SslStream;
