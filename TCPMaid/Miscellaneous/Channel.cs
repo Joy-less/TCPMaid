@@ -56,6 +56,10 @@ public sealed class Channel : IDisposable {
     /// Triggers when the channel receives a message.
     /// </summary>
     public event Action<Message>? OnReceive;
+    /// <summary>
+    /// Triggers when the channel receives a fragment of a message. (MessageID, CurrentBytes, TotalBytes)
+    /// </summary>
+    public event Action<ulong, int, int>? OnReceiveFragment;
 
     /// <summary>
     /// Creates a new channel that listens to the given stream.
@@ -102,15 +106,30 @@ public sealed class Channel : IDisposable {
     /// Serialises and sends a request to the remote and waits for a response.
     /// </summary>
     /// <returns>A <typeparamref name="TResponse"/>, or <see langword="null"/> if cancelled or the channel was disconnected.</returns>
-    public async Task<TResponse?> RequestAsync<TResponse>(Request Request, Predicate<TResponse>? Where = null, CancellationToken CancelToken = default) where TResponse : Response {
+    /// <param name="OnReceiveFragment">Called when a fragment of the response has been received, useful for progress bars. (CurrentBytes, TotalBytes)</param>
+    public async Task<TResponse?> RequestAsync<TResponse>(Request Request, CancellationToken CancelToken = default, Action<int, int>? OnReceiveFragment = null) where TResponse : Response {
+        // Get request ID
+        ulong RequestID = Request.ID;
+        // Call receive fragment callback
+        void ReceiveFragment(ulong MessageID, int CurrentBytes, int TotalBytes) {
+            if (MessageID == RequestID) {
+                OnReceiveFragment?.Invoke(CurrentBytes, TotalBytes);
+            }
+        }
         // Send request
         bool Success = await SendAsync(Request);
         // Send failure
         if (!Success) {
             return null;
         }
+        // Listen for fragments
+        this.OnReceiveFragment += ReceiveFragment;
         // Return response
-        return await WaitAsync<TResponse>(Response => Response.RequestID == Request.ID && (Where is null || Where(Response)), CancelToken);
+        TResponse? Response = await WaitAsync<TResponse>(Response => Response.RequestID == Request.ID, CancelToken);
+        // Stop listening for fragments
+        this.OnReceiveFragment -= ReceiveFragment;
+        // Return the response
+        return Response;
     }
     /// <summary>
     /// Waits for a message from the remote.
@@ -127,6 +146,7 @@ public sealed class Channel : IDisposable {
                 OnComplete.TrySetResult(MessageOfT);
             }
         }
+        // Stop waiting and return null
         void CancelWait(string Reason, bool ByRemote) {
             OnComplete.TrySetResult(null);
         }
@@ -268,7 +288,10 @@ public sealed class Channel : IDisposable {
                         // Add pending message
                         PendingMessages.Add(MessageID, PendingMessage);
                     }
-                        
+
+                    // Invoke fragment received with pending message
+                    OnReceiveFragment?.Invoke(MessageID, PendingMessage.CurrentBytes.Length, PendingMessage.TotalMessageLength);
+                    
                     // Ensure message is complete
                     if (PendingMessage.IsIncomplete) {
                         // Ask for next fragment
