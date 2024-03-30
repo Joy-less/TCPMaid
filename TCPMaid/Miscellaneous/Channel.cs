@@ -107,7 +107,7 @@ public sealed class Channel : IDisposable {
     /// </summary>
     /// <returns>A <typeparamref name="TResponse"/>, or <see langword="null"/> if cancelled or the channel was disconnected.</returns>
     /// <param name="OnReceiveFragment">Called when a fragment of the response has been received, useful for progress bars. (CurrentBytes, TotalBytes)</param>
-    public async Task<TResponse?> RequestAsync<TResponse>(Request Request, CancellationToken CancelToken = default, Action<int, int>? OnReceiveFragment = null) where TResponse : Response {
+    public async Task<TResponse?> RequestAsync<TResponse>(Request Request, Action<int, int>? OnReceiveFragment = null, CancellationToken CancelToken = default) where TResponse : Response {
         // Get request ID
         ulong RequestID = Request.ID;
         // Call receive fragment callback
