@@ -7,11 +7,11 @@ namespace TCPMaid;
 /// <summary>
 /// The base class for messages that can be serialised and sent across a channel. Should not be reused.
 /// </summary>
-public abstract class Message {
+public abstract class Message(ulong? ID = null) {
     /// <summary>
-    /// The generated identifier for the message.
+    /// The generated identifier for the message. If this is a response, it should be set to the ID of the request.
     /// </summary>
-    public ulong ID = Interlocked.Increment(ref LastID);
+    public ulong ID = ID ?? Interlocked.Increment(ref LastID);
 
     private static readonly Dictionary<string, Type> MessageTypes = GetMessageTypes();
     private static ulong LastID;
@@ -66,18 +66,4 @@ public abstract class Message {
             .Where(Type => Type.IsClass && !Type.IsAbstract && Type.IsSubclassOf(typeof(Message))
         ).ToDictionary(Type => Type.Name);
     }
-}
-/// <summary>
-/// The base class for messages that expect a response. Should not be reused.
-/// </summary>
-public abstract class Request : Message {
-}
-/// <summary>
-/// The base class for messages that respond to a request. Should not be reused.
-/// </summary>
-public abstract class Response(ulong RequestID) : Message {
-    /// <summary>
-    /// The ID of the request this is a response to.
-    /// </summary>
-    public ulong RequestID = RequestID;
 }

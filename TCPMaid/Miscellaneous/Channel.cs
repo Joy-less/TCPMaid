@@ -79,8 +79,6 @@ public sealed class Channel : IDisposable {
     /// </summary>
     /// <returns><see langword="true"/> if the message was sent successfully; <see langword="false"/> otherwise.</returns>
     public async Task<bool> SendAsync(Message Message) {
-        // Get message ID
-        ulong MessageID = Message.ID;
         // Create packets from message bytes
         byte[][] Packets = CreatePackets(Message, Maid.Options.MaxFragmentSize);
 
@@ -89,7 +87,7 @@ public sealed class Channel : IDisposable {
             // Send packets
             for (int i = 0; i < Packets.Length; i++) {
                 // Await send packet message
-                if (i != 0) await WaitAsync<NextFragmentMessage>(NextFragmentMessage => NextFragmentMessage.MessageID == MessageID);
+                if (i != 0) await WaitAsync<NextFragmentMessage>(NextFragmentMessage => NextFragmentMessage.MessageID == Message.ID);
                 // Send packet
                 await Stream.WriteAsync(Packets[i]);
             }
@@ -107,12 +105,10 @@ public sealed class Channel : IDisposable {
     /// </summary>
     /// <returns>A <typeparamref name="TResponse"/>, or <see langword="null"/> if cancelled or the channel was disconnected.</returns>
     /// <param name="OnReceiveFragment">Called when a fragment of the response has been received, useful for progress bars. (CurrentBytes, TotalBytes)</param>
-    public async Task<TResponse?> RequestAsync<TResponse>(Request Request, Action<int, int>? OnReceiveFragment = null, CancellationToken CancelToken = default) where TResponse : Response {
-        // Get request ID
-        ulong RequestID = Request.ID;
+    public async Task<TResponse?> RequestAsync<TResponse>(Message Request, Action<int, int>? OnReceiveFragment = null, CancellationToken CancelToken = default) where TResponse : Message {
         // Call receive fragment callback
         void ReceiveFragment(ulong MessageID, int CurrentBytes, int TotalBytes) {
-            if (MessageID == RequestID) {
+            if (MessageID == Request.ID) {
                 OnReceiveFragment?.Invoke(CurrentBytes, TotalBytes);
             }
         }
@@ -127,7 +123,7 @@ public sealed class Channel : IDisposable {
             // Listen for fragments
             this.OnReceiveFragment += ReceiveFragment;
             // Return response
-            return await WaitAsync<TResponse>(Response => Response.RequestID == Request.ID, CancelToken);
+            return await WaitAsync<TResponse>(Response => Response.ID == Request.ID, CancelToken);
         }
         finally {
             // Stop listening for fragments

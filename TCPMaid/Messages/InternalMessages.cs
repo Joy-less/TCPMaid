@@ -17,10 +17,10 @@ public sealed partial class NextFragmentMessage : Message {
     }
 }
 [MemoryPackable]
-public sealed partial class PingRequest : Request {
+public sealed partial class PingRequest : Message {
     internal PingRequest() { }
 }
 [MemoryPackable]
-public sealed partial class PingResponse : Response {
-    internal PingResponse(ulong RequestID) : base(RequestID) { }
+public sealed partial class PingResponse : Message {
+    internal PingResponse(ulong ID) : base(ID) { }
 }
