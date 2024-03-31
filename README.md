@@ -69,6 +69,8 @@ Received 'hello server!' from client!
 
 ## Requests
 
+The client may want to ask the server for data. To send a message and wait for a response, you can use `RequestAsync`.
+
 #### Client
 ```cs
 // Send an ExampleRequest and wait for an ExampleResponse with the same message ID
@@ -96,4 +98,20 @@ public partial class ExampleResponse(ulong ID, string ExampleText) : Message(ID)
 #### Output
 ```
 Here's my response: -.-
+```
+
+## Streams
+
+You may want to send a large file without keeping it all in memory. To send data from a stream, you can use `SendStreamAsync` and `ReceiveStreamAsync`.
+
+#### Sender
+```cs
+using FileStream Reader = File.OpenRead("Cat.png");
+await Channel.SendStreamAsync("Cat Picture", Reader);
+```
+
+#### Receiver
+```cs
+using FileStream Writer = File.OpenWrite("Cat.png");
+await Channel.ReceiveStreamAsync("Cat Picture", Writer);
 ```
