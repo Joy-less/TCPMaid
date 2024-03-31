@@ -104,30 +104,52 @@ public sealed class Channel : IDisposable {
     /// Serialises and sends a request to the remote and waits for a response.
     /// </summary>
     /// <returns>A <typeparamref name="TResponse"/>, or <see langword="null"/> if cancelled or the channel was disconnected.</returns>
-    /// <param name="OnReceiveFragment">Called when a fragment of the response has been received, useful for progress bars. (CurrentBytes, TotalBytes)</param>
-    public async Task<TResponse?> RequestAsync<TResponse>(Message Request, Action<int, int>? OnReceiveFragment = null, CancellationToken CancelToken = default) where TResponse : Message {
-        // Call receive fragment callback
-        void ReceiveFragment(ulong MessageID, int CurrentBytes, int TotalBytes) {
-            if (MessageID == Request.ID) {
-                OnReceiveFragment?.Invoke(CurrentBytes, TotalBytes);
+    /// <param name="OnFragment">Called when a fragment of the response has been received, useful for progress bars. (CurrentBytes, TotalBytes)</param>
+    public async Task<TResponse?> RequestAsync<TResponse>(Message Request, Action<int, int>? OnFragment = null, CancellationToken CancelToken = default) where TResponse : Message {
+        // Create receive signal
+        TaskCompletionSource<TResponse?> OnComplete = new();
+        // Filter received messages
+        void Filter(Message Message) {
+            // Check if message is of the given type and meets the predicate
+            if (Message is TResponse MessageOfT && MessageOfT.ID == Request.ID) {
+                // Set return variable and signal
+                OnComplete.TrySetResult(MessageOfT);
             }
         }
-        // Send request
-        bool Success = await SendAsync(Request);
-        // Send failure
-        if (!Success) {
-            return null;
+        // Stop waiting and return null
+        void CancelWait(string Reason, bool ByRemote) {
+            OnComplete.TrySetResult(null);
         }
-        
+        // Receive fragment callback
+        void ReceiveFragment(ulong MessageID, int CurrentBytes, int TotalBytes) {
+            if (MessageID == Request.ID) {
+                OnFragment?.Invoke(CurrentBytes, TotalBytes);
+            }
+        }
+
         try {
+            // Listen for disconnect
+            OnDisconnect += CancelWait;
+            // Listen for messages
+            OnReceive += Filter;
             // Listen for fragments
-            this.OnReceiveFragment += ReceiveFragment;
-            // Return response
-            return await WaitAsync<TResponse>(Response => Response.ID == Request.ID, CancelToken);
+            OnReceiveFragment += ReceiveFragment;
+            // Send request
+            bool Success = await SendAsync(Request);
+            // Send failure
+            if (!Success) {
+                return null;
+            }
+            // Await a response
+            return await OnComplete.Task.WaitAsync(CancelToken);
         }
         finally {
             // Stop listening for fragments
-            this.OnReceiveFragment -= ReceiveFragment;
+            OnReceiveFragment -= ReceiveFragment;
+            // Stop listening for messages
+            OnReceive -= Filter;
+            // Stop listening for disconnect
+            OnDisconnect -= CancelWait;
         }
     }
     /// <summary>
@@ -135,7 +157,7 @@ public sealed class Channel : IDisposable {
     /// </summary>
     /// <returns>A <typeparamref name="TMessage"/>, or <see langword="null"/> if cancelled or the channel was disconnected.</returns>
     public async Task<TMessage?> WaitAsync<TMessage>(Predicate<TMessage>? Where = null, CancellationToken CancelToken = default) where TMessage : Message {
-        // Create return variable and receive signal
+        // Create receive signal
         TaskCompletionSource<TMessage?> OnComplete = new();
         // Filter received messages
         void Filter(Message Message) {
