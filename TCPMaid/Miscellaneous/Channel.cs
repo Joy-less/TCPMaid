@@ -77,8 +77,8 @@ public sealed class Channel : IDisposable {
     /// <summary>
     /// Serialises and sends a message to the remote.
     /// </summary>
-    /// <returns><see langword="true"/> if the message was sent successfully; <see langword="false"/> otherwise.</returns>
-    public async Task<bool> SendAsync(Message Message) {
+    /// <returns><see langword="true"/> if the message was fully sent successfully; <see langword="false"/> otherwise.</returns>
+    public async Task<bool> SendAsync(Message Message, CancellationToken CancelToken = default) {
         // Create packets from message bytes
         byte[][] Packets = CreatePackets(Message, Maid.Options.MaxFragmentSize);
 
@@ -87,12 +87,16 @@ public sealed class Channel : IDisposable {
             // Send packets
             for (int i = 0; i < Packets.Length; i++) {
                 // Await send packet message
-                if (i != 0) await WaitAsync<NextFragmentMessage>(NextFragmentMessage => NextFragmentMessage.MessageID == Message.ID);
+                if (i != 0) await WaitAsync<NextFragmentMessage>(NextFragmentMessage => NextFragmentMessage.MessageID == Message.ID, CancelToken);
                 // Send packet
-                await Stream.WriteAsync(Packets[i]);
+                await Stream.WriteAsync(Packets[i], CancelToken);
             }
             // Send success!
             return true;
+        }
+        // Send cancelled
+        catch (OperationCanceledException) {
+            return false;
         }
         // Failed to send message
         catch (Exception) {
@@ -135,7 +139,7 @@ public sealed class Channel : IDisposable {
             // Listen for fragments
             OnReceiveFragment += ReceiveFragment;
             // Send request
-            bool Success = await SendAsync(Request);
+            bool Success = await SendAsync(Request, CancelToken);
             // Send failure
             if (!Success) {
                 return null;
@@ -171,7 +175,7 @@ public sealed class Channel : IDisposable {
         void CancelWait(string Reason, bool ByRemote) {
             OnComplete.TrySetResult(null);
         }
-        
+
         try {
             // Listen for disconnect
             OnDisconnect += CancelWait;
@@ -198,6 +202,74 @@ public sealed class Channel : IDisposable {
         await RequestAsync<PingResponse>(new PingRequest(), CancelToken: CancelToken);
         // Calculate round trip time
         return Latency = Timer.Elapsed.TotalSeconds / 2;
+    }
+    /// <summary>
+    /// Sends bytes from a stream to the remote in a series of <see cref="StreamMessage"/>s, useful for sending large files.
+    /// </summary>
+    /// <returns><see langword="true"/> if the stream was fully sent successfully; <see langword="false"/> otherwise.</returns>
+    public async Task<bool> SendStreamAsync(string Identifier, Stream FromStream, CancellationToken CancelToken = default) {
+        // Send stream data
+        try {
+            // Generate message ID
+            ulong MessageID = Message.GenerateID();
+            // Enable first packet flag
+            bool IsFirstPacket = true;
+            // Send stream data fragments
+            while (FromStream.Position < FromStream.Length) {
+                // Await send packet message
+                if (!IsFirstPacket) await WaitAsync<NextFragmentMessage>(NextFragmentMessage => NextFragmentMessage.MessageID == MessageID, CancelToken);
+                // Read fragment from stream
+                byte[] Fragment = await FromStream.ReadBytesAsync(Maid.Options.MaxFragmentSize, CancelToken);
+                // Create stream message from fragment
+                StreamMessage StreamMessage = new(MessageID, Identifier, FromStream.Length, Fragment);
+                // Create packet from stream message
+                byte[] Packet = CreatePacket(MessageID, StreamMessage.ToBytes());
+                // Send packet
+                await Stream.WriteAsync(Packet, CancelToken);
+                // Disable first packet flag
+                IsFirstPacket = false;
+            }
+        }
+        // Send cancelled
+        catch (OperationCanceledException) {
+            return false;
+        }
+        // Failed to send message
+        catch (Exception) {
+            await DisconnectAsync(Silently: true);
+            return false;
+        }
+        // Send success
+        return true;
+    }
+    /// <summary>
+    /// Receives a stream of bytes from a series of <see cref="StreamMessage"/>s, useful for sending large files.
+    /// </summary>
+    /// <returns><see langword="true"/> if the stream was fully received successfully; <see langword="false"/> otherwise.</returns>
+    /// <param name="OnFragment">Called when a fragment of the response has been received, useful for progress bars. (CurrentBytes, TotalBytes)</param>
+    public async Task<bool> ReceiveStreamAsync(string Identifier, Stream ToStream, Action<long, long>? OnFragment = null, CancellationToken CancelToken = default) {
+        while (true) {
+            // Wait for stream message
+            StreamMessage? StreamMessage = await WaitAsync<StreamMessage>(StreamMessage => StreamMessage.Identifier == Identifier, CancelToken);
+            // Wait cancelled
+            if (StreamMessage is null) {
+                return false;
+            }
+            // Write fragment to receive stream
+            await ToStream.WriteAsync(StreamMessage.Fragment, CancelToken);
+            // Invoke receive fragment callback
+            OnFragment?.Invoke(ToStream.Length, StreamMessage.TotalLength);
+            // Fully received
+            if (ToStream.Length >= StreamMessage.TotalLength) {
+                return true;
+            }
+            // Ask for next fragment
+            bool SendSuccess = await SendAsync(new NextFragmentMessage(StreamMessage.ID), CancelToken);
+            // Failed to ask for next fragment
+            if (!SendSuccess) {
+                return false;
+            }
+        }
     }
     /// <summary>
     /// Sends the disconnect reason and disposes the channel.

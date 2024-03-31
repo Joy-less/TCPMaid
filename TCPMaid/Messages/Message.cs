@@ -11,7 +11,7 @@ public abstract class Message(ulong? ID = null) {
     /// <summary>
     /// The generated identifier for the message. If this is a response, it should be set to the ID of the request.
     /// </summary>
-    public ulong ID = ID ?? Interlocked.Increment(ref LastID);
+    public ulong ID = ID ?? GenerateID();
 
     private static readonly Dictionary<string, Type> MessageTypes = GetMessageTypes();
     private static ulong LastID;
@@ -46,12 +46,18 @@ public abstract class Message(ulong? ID = null) {
         // Create message
         return (Message)MemoryPackSerializer.Deserialize(MessageType, MessageBytes)!;
     }
+    /// <summary>
+    /// Generates a unique message identifier.
+    /// </summary>
+    public static ulong GenerateID() {
+        return Interlocked.Increment(ref LastID);
+    }
 
     /// <summary>
     /// Whether the message is only for internal use.
     /// </summary>
     [MemoryPackIgnore]
-    public bool Internal => this is DisconnectMessage or NextFragmentMessage or PingRequest or PingResponse;
+    public bool Internal => this is DisconnectMessage or NextFragmentMessage or PingRequest or PingResponse or StreamMessage;
 
     /// <summary>
     /// Searches the cached available assemblies for a message type with the given name.

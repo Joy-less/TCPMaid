@@ -37,7 +37,7 @@ internal static class Extensions {
         return Fragments;
     }
     /// <summary>
-    /// Converts a message into an array of packets to be sent via the network stream.
+    /// Converts a message into an array of packets to be sent via a network stream.
     /// </summary>
     public static byte[][] CreatePackets(Message Message, int MaxFragmentSize) {
         // Get bytes
@@ -51,19 +51,25 @@ internal static class Extensions {
             // Get current fragment
             byte[] Fragment = Fragments[i];
             // Build packet
-            Packets[i] = Concat(
-                // Packet length
-                BitConverter.GetBytes(sizeof(ulong) + sizeof(int) + Fragment.Length),
-                // Message ID
-                BitConverter.GetBytes(Message.ID),
-                // Total message length
-                BitConverter.GetBytes(Bytes.Length),
-                // Fragment data
-                Fragment
-            );
+            Packets[i] = CreatePacket(Message.ID, Fragment, Bytes.Length);
         }
         // Return packets
         return Packets;
+    }
+    /// <summary>
+    /// Converts a byte array and packet data into a packet to be sent via a network stream.
+    /// </summary>
+    public static byte[] CreatePacket(ulong MessageID, byte[] PartialData, int? TotalMessageLength = null) {
+        return Concat(
+            // Packet length
+            BitConverter.GetBytes(sizeof(ulong) + sizeof(int) + PartialData.Length),
+            // Message ID
+            BitConverter.GetBytes(MessageID),
+            // Total message length
+            BitConverter.GetBytes(TotalMessageLength ?? PartialData.Length),
+            // Fragment data
+            PartialData
+        );
     }
     /// <summary>
     /// Reads bytes from a stream using a buffer of the given size.

@@ -24,3 +24,14 @@ public sealed partial class PingRequest : Message {
 public sealed partial class PingResponse : Message {
     internal PingResponse(ulong ID) : base(ID) { }
 }
+[MemoryPackable]
+public sealed partial class StreamMessage : Message {
+    public string Identifier;
+    public long TotalLength;
+    public byte[] Fragment;
+    internal StreamMessage(ulong ID, string Identifier, long TotalLength, byte[] Fragment) : base(ID) {
+        this.Identifier = Identifier;
+        this.TotalLength = TotalLength;
+        this.Fragment = Fragment;
+    }
+}

@@ -21,9 +21,9 @@ public abstract class Options {
     public double Timeout = 10;
     /// <summary>
     /// The size of the network buffer in bytes. Uses more memory, but speeds up transmission of larger messages.<br/>
-    /// Default: 30kB
+    /// Default: 40kB
     /// </summary>
-    public int BufferSize = 30_000;
+    public int BufferSize = 40_000;
     /// <summary>
     /// The maximum size of a message in bytes before it will be broken up to avoid congestion.<br/>
     /// Default: 1MB
