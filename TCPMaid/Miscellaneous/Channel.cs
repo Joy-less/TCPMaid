@@ -107,7 +107,7 @@ public sealed class Channel : IDisposable {
     /// <summary>
     /// Serialises and sends a request to the remote and waits for a response.
     /// </summary>
-    /// <returns>A <typeparamref name="TResponse"/>, or <see langword="null"/> if cancelled or the channel was disconnected.</returns>
+    /// <returns><typeparamref name="TResponse"/>, or <see langword="null"/> if cancelled or the channel was disconnected.</returns>
     /// <param name="OnFragment">Called when a fragment of the response has been received, useful for progress bars. (CurrentBytes, TotalBytes)</param>
     public async Task<TResponse?> RequestAsync<TResponse>(Message Request, Action<int, int>? OnFragment = null, CancellationToken CancelToken = default) where TResponse : Message {
         // Create receive signal
@@ -159,7 +159,7 @@ public sealed class Channel : IDisposable {
     /// <summary>
     /// Waits for a message from the remote.
     /// </summary>
-    /// <returns>A <typeparamref name="TMessage"/>, or <see langword="null"/> if cancelled or the channel was disconnected.</returns>
+    /// <returns><typeparamref name="TMessage"/>, or <see langword="null"/> if cancelled or the channel was disconnected.</returns>
     public async Task<TMessage?> WaitAsync<TMessage>(Predicate<TMessage>? Where = null, CancellationToken CancelToken = default) where TMessage : Message {
         // Create receive signal
         TaskCompletionSource<TMessage?> OnComplete = new();
