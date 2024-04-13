@@ -12,7 +12,7 @@
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
     <Title>TCPMaid</Title>
     <FileVersion></FileVersion>
-    <Version>2.4.0</Version>
+    <Version>2.4.1</Version>
     <Authors>Joyless</Authors>
     <PackageTags>TCP; Server; Client; Netcode; Networking; Multiplayer; SSL; TLS</PackageTags>
     <Description>An easy, powerful and lightweight TCP client/server in C#.</Description>
