@@ -335,18 +335,6 @@ public sealed class Channel : IDisposable {
                 // Wait for bytes from the network stream
                 PendingBytes.AddRange(await Stream.ReadBytesAsync(Maid.Options.BufferSize, TimeoutTokenSource.Token));
 
-                // Limit memory usage on server
-                if (Maid.Options is ServerMaidOptions ServerOptions) {
-                    // Calculate total bytes used in pending messages from client
-                    int PendingSize = PendingBytes.Count + PendingMessages.Sum(PendingMessage => PendingMessage.Value.CurrentBytes.Length);
-                    // Check if total exceeds limit
-                    if (PendingSize > ServerOptions.MaxPendingSize) {
-                        // Disconnect client for using too much memory
-                        await DisconnectAsync(DisconnectReason.MemoryUsage);
-                        return;
-                    }
-                }
-
                 // Extract all messages
                 while (true) {
                     // Ensure length of fragment is complete
@@ -402,6 +390,18 @@ public sealed class Channel : IDisposable {
 
                     // Handle message
                     OnReceive?.Invoke(Message);
+                }
+
+                // Limit memory usage on server
+                if (Maid.Options is ServerMaidOptions ServerOptions) {
+                    // Calculate total bytes used in pending messages from client
+                    int PendingSize = PendingBytes.Count + PendingMessages.Sum(PendingMessage => PendingMessage.Value.CurrentBytes.Length);
+                    // Check if total exceeds limit
+                    if (PendingSize > ServerOptions.MaxPendingSize) {
+                        // Disconnect client for using too much memory
+                        await DisconnectAsync(DisconnectReason.MemoryUsage);
+                        return;
+                    }
                 }
             }
         }
