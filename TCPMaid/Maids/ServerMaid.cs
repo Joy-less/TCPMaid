@@ -197,5 +197,8 @@ public sealed class ServerMaidOptions : MaidOptions {
     /// The maximum number of pending bytes from a client before it is disconnected.<br/>
     /// Default: 3MB
     /// </summary>
+    /// <remarks>
+    /// This is important for mitigating DDOS attacks that consume memory on the server.
+    /// </remarks>
     public int MaxPendingSize { get; set; } = 3_000_000;
 }
