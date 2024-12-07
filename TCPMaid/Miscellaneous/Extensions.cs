@@ -59,12 +59,12 @@ internal static class Extensions {
     /// <summary>
     /// Converts a byte array and packet data into a packet to be sent via a network stream.
     /// </summary>
-    public static byte[] CreatePacket(ulong MessageID, byte[] PartialData, int? TotalMessageLength = null) {
+    public static byte[] CreatePacket(long MessageId, byte[] PartialData, int? TotalMessageLength = null) {
         return Concat(
             // Packet length
-            BitConverter.GetBytes(sizeof(ulong) + sizeof(int) + PartialData.Length),
+            BitConverter.GetBytes(sizeof(long) + sizeof(int) + PartialData.Length),
             // Message ID
-            BitConverter.GetBytes(MessageID),
+            BitConverter.GetBytes(MessageId),
             // Total message length
             BitConverter.GetBytes(TotalMessageLength ?? PartialData.Length),
             // Fragment data

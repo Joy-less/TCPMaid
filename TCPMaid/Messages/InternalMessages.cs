@@ -12,10 +12,10 @@ public sealed partial class DisconnectMessage : Message {
 }
 [MemoryPackable]
 public sealed partial class NextFragmentMessage : Message {
-    public ulong MessageID { get; }
+    public long MessageId { get; }
 
-    internal NextFragmentMessage(ulong MessageID) {
-        this.MessageID = MessageID;
+    internal NextFragmentMessage(long MessageId) {
+        this.MessageId = MessageId;
     }
 }
 [MemoryPackable]
@@ -24,7 +24,7 @@ public sealed partial class PingRequest : Message {
 }
 [MemoryPackable]
 public sealed partial class PingResponse : Message {
-    internal PingResponse(ulong ID) : base(ID) { }
+    internal PingResponse(long Id) : base(Id) { }
 }
 [MemoryPackable]
 public sealed partial class StreamMessage : Message {
@@ -32,7 +32,7 @@ public sealed partial class StreamMessage : Message {
     public long TotalLength { get; }
     public byte[] Fragment { get; }
 
-    internal StreamMessage(ulong ID, string Identifier, long TotalLength, byte[] Fragment) : base(ID) {
+    internal StreamMessage(long Id, string Identifier, long TotalLength, byte[] Fragment) : base(Id) {
         this.Identifier = Identifier;
         this.TotalLength = TotalLength;
         this.Fragment = Fragment;

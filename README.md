@@ -91,7 +91,7 @@ Server.OnReceive += (Channel, Message) => {
 public partial class ExampleRequest : Message {
 }
 [MemoryPackable]
-public partial class ExampleResponse(ulong Id, string ExampleText) : Message(Id) {
+public partial class ExampleResponse(long Id, string ExampleText) : Message(Id) {
     public readonly string ExampleText = ExampleText;
 }
 ```

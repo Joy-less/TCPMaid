@@ -59,7 +59,7 @@ public sealed class Channel : IDisposable {
     /// <summary>
     /// Triggers when the channel receives a fragment of a message. (MessageID, CurrentBytes, TotalBytes)
     /// </summary>
-    public event Action<ulong, int, int>? OnReceiveFragment;
+    public event Action<long, int, int>? OnReceiveFragment;
 
     /// <summary>
     /// Creates a new channel that listens to the given stream.
@@ -87,7 +87,7 @@ public sealed class Channel : IDisposable {
             // Send packets
             for (int i = 0; i < Packets.Length; i++) {
                 // Await send packet message
-                if (i != 0) await WaitAsync<NextFragmentMessage>(NextFragmentMessage => NextFragmentMessage.MessageID == Message.Id, CancelToken);
+                if (i != 0) await WaitAsync<NextFragmentMessage>(NextFragmentMessage => NextFragmentMessage.MessageId == Message.Id, CancelToken);
                 // Send packet
                 await Stream.WriteAsync(Packets[i], CancelToken);
             }
@@ -125,8 +125,8 @@ public sealed class Channel : IDisposable {
             OnComplete.TrySetResult(null);
         }
         // Receive fragment callback
-        void ReceiveFragment(ulong MessageID, int CurrentBytes, int TotalBytes) {
-            if (MessageID == Request.Id) {
+        void ReceiveFragment(long MessageId, int CurrentBytes, int TotalBytes) {
+            if (MessageId == Request.Id) {
                 OnFragment?.Invoke(CurrentBytes, TotalBytes);
             }
         }
@@ -211,14 +211,14 @@ public sealed class Channel : IDisposable {
         // Send stream data
         try {
             // Generate message ID
-            ulong MessageId = Message.GenerateId();
+            long MessageId = Message.GenerateId();
             // Enable first packet flag
             bool IsFirstPacket = true;
             // Send stream data fragments
             while (FromStream.Position < FromStream.Length) {
                 // Await send packet message
                 if (!IsFirstPacket) {
-                    await WaitAsync<NextFragmentMessage>(NextFragmentMessage => NextFragmentMessage.MessageID == MessageId, CancelToken);
+                    await WaitAsync<NextFragmentMessage>(NextFragmentMessage => NextFragmentMessage.MessageId == MessageId, CancelToken);
                 }
                 // Read fragment from stream
                 byte[] Fragment = await FromStream.ReadBytesAsync(Maid.Options.MaxFragmentSize, CancelToken);
@@ -326,7 +326,7 @@ public sealed class Channel : IDisposable {
 
         // Create collections for bytes waiting to be processed
         List<byte> PendingBytes = [];
-        Dictionary<ulong, PendingMessage> PendingMessages = [];
+        Dictionary<long, PendingMessage> PendingMessages = [];
 
         // Listen for incoming packets
         try {
@@ -357,35 +357,35 @@ public sealed class Channel : IDisposable {
                     PendingBytes.RemoveRange(0, sizeof(int) + FragmentLength);
 
                     // Get fragment data
-                    ulong MessageID = BitConverter.ToUInt64(Fragment, 0);
-                    int TotalMessageLength = BitConverter.ToInt32(Fragment, sizeof(ulong));
-                    byte[] FragmentData = Fragment[(sizeof(ulong) + sizeof(int))..];
+                    long MessageId = BitConverter.ToInt64(Fragment, 0);
+                    int TotalMessageLength = BitConverter.ToInt32(Fragment, sizeof(long));
+                    byte[] FragmentData = Fragment[(sizeof(long) + sizeof(int))..];
 
                     // Existing message
-                    if (PendingMessages.TryGetValue(MessageID, out PendingMessage? PendingMessage)) {
+                    if (PendingMessages.TryGetValue(MessageId, out PendingMessage? PendingMessage)) {
                         // Update pending message
                         PendingMessage.TotalMessageLength = TotalMessageLength;
-                        PendingMessage.CurrentBytes = Concat(PendingMessage.CurrentBytes, Fragment[sizeof(ulong)..]);
+                        PendingMessage.CurrentBytes = Concat(PendingMessage.CurrentBytes, Fragment[sizeof(long)..]);
                     }
                     // New message
                     else {
                         // Create pending message
                         PendingMessage = new PendingMessage(TotalMessageLength, FragmentData);
                         // Add pending message
-                        PendingMessages.Add(MessageID, PendingMessage);
+                        PendingMessages.Add(MessageId, PendingMessage);
                     }
 
                     // Invoke fragment received with pending message
-                    OnReceiveFragment?.Invoke(MessageID, PendingMessage.CurrentBytes.Length, PendingMessage.TotalMessageLength);
+                    OnReceiveFragment?.Invoke(MessageId, PendingMessage.CurrentBytes.Length, PendingMessage.TotalMessageLength);
                     
                     // Ensure message is complete
                     if (PendingMessage.Incomplete) {
                         // Ask for next fragment
-                        _ = SendAsync(new NextFragmentMessage(MessageID));
+                        _ = SendAsync(new NextFragmentMessage(MessageId));
                         break;
                     }
                     // Remove pending message
-                    PendingMessages.Remove(MessageID);
+                    PendingMessages.Remove(MessageId);
 
                     // Deserialise message
                     Message Message = Message.FromBytes(PendingMessage.CurrentBytes);
