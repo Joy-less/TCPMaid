@@ -11,8 +11,8 @@ TCPMaid makes it easy to setup a robust client & server, send messages and reque
 ## Features
 - Easy client & server setup
 - Supports SSL encryption and certificates
-- Automatically serialises messages
-- Automatically fragments large messages
+- Automatically serialises messages to bytes
+- Automatically fragments large messages to avoid congestion
 - Supports requests and responses
 - Supports IPv4 and IPv6
 
@@ -81,7 +81,7 @@ Console.WriteLine(Response!.ExampleText);
 ```cs
 Server.OnReceive += (Channel, Message) => {
     if (Message is ExampleRequest ExampleRequest) {
-        _ = Channel.SendAsync(new ExampleResponse(ExampleRequest.ID, "Here's my response: -.-"));
+        _ = Channel.SendAsync(new ExampleResponse(ExampleRequest.Id, "Here's my response: -.-"));
     }
 };
 ```
@@ -91,7 +91,7 @@ Server.OnReceive += (Channel, Message) => {
 public partial class ExampleRequest : Message {
 }
 [MemoryPackable]
-public partial class ExampleResponse(ulong ID, string ExampleText) : Message(ID) {
+public partial class ExampleResponse(ulong Id, string ExampleText) : Message(Id) {
     public readonly string ExampleText = ExampleText;
 }
 ```

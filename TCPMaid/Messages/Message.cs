@@ -7,14 +7,14 @@ namespace TCPMaid;
 /// <summary>
 /// The base class for messages that can be serialised and sent across a channel. Should not be reused.
 /// </summary>
-public abstract class Message(ulong? ID = null) {
+public abstract class Message(ulong? Id = null) {
     /// <summary>
     /// The generated identifier for the message. If this is a response, it should be set to the ID of the request.
     /// </summary>
-    public ulong ID { get; } = ID ?? GenerateID();
+    public ulong Id { get; set; } = Id ?? GenerateId();
 
     private static readonly Dictionary<string, Type> MessageTypes = GetMessageTypes();
-    private static ulong LastID;
+    private static ulong LastId;
 
     /// <summary>
     /// Serialises the message and its name as an array of bytes.
@@ -49,8 +49,8 @@ public abstract class Message(ulong? ID = null) {
     /// <summary>
     /// Generates a unique message identifier.
     /// </summary>
-    public static ulong GenerateID() {
-        return Interlocked.Increment(ref LastID);
+    public static ulong GenerateId() {
+        return Interlocked.Increment(ref LastId);
     }
 
     /// <summary>

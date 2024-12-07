@@ -87,7 +87,7 @@ public sealed class Channel : IDisposable {
             // Send packets
             for (int i = 0; i < Packets.Length; i++) {
                 // Await send packet message
-                if (i != 0) await WaitAsync<NextFragmentMessage>(NextFragmentMessage => NextFragmentMessage.MessageID == Message.ID, CancelToken);
+                if (i != 0) await WaitAsync<NextFragmentMessage>(NextFragmentMessage => NextFragmentMessage.MessageID == Message.Id, CancelToken);
                 // Send packet
                 await Stream.WriteAsync(Packets[i], CancelToken);
             }
@@ -115,7 +115,7 @@ public sealed class Channel : IDisposable {
         // Filter received messages
         void Filter(Message Message) {
             // Check if message is of the given type and meets the predicate
-            if (Message is TResponse MessageOfT && MessageOfT.ID == Request.ID) {
+            if (Message is TResponse MessageOfT && MessageOfT.Id == Request.Id) {
                 // Set return variable and signal
                 OnComplete.TrySetResult(MessageOfT);
             }
@@ -126,7 +126,7 @@ public sealed class Channel : IDisposable {
         }
         // Receive fragment callback
         void ReceiveFragment(ulong MessageID, int CurrentBytes, int TotalBytes) {
-            if (MessageID == Request.ID) {
+            if (MessageID == Request.Id) {
                 OnFragment?.Invoke(CurrentBytes, TotalBytes);
             }
         }
@@ -211,19 +211,21 @@ public sealed class Channel : IDisposable {
         // Send stream data
         try {
             // Generate message ID
-            ulong MessageID = Message.GenerateID();
+            ulong MessageId = Message.GenerateId();
             // Enable first packet flag
             bool IsFirstPacket = true;
             // Send stream data fragments
             while (FromStream.Position < FromStream.Length) {
                 // Await send packet message
-                if (!IsFirstPacket) await WaitAsync<NextFragmentMessage>(NextFragmentMessage => NextFragmentMessage.MessageID == MessageID, CancelToken);
+                if (!IsFirstPacket) {
+                    await WaitAsync<NextFragmentMessage>(NextFragmentMessage => NextFragmentMessage.MessageID == MessageId, CancelToken);
+                }
                 // Read fragment from stream
                 byte[] Fragment = await FromStream.ReadBytesAsync(Maid.Options.MaxFragmentSize, CancelToken);
                 // Create stream message from fragment
-                StreamMessage StreamMessage = new(MessageID, Identifier, FromStream.Length, Fragment);
+                StreamMessage StreamMessage = new(MessageId, Identifier, FromStream.Length, Fragment);
                 // Create packet from stream message
-                byte[] Packet = CreatePacket(MessageID, StreamMessage.ToBytes());
+                byte[] Packet = CreatePacket(MessageId, StreamMessage.ToBytes());
                 // Send packet
                 await Stream.WriteAsync(Packet, CancelToken);
                 // Disable first packet flag
@@ -264,7 +266,7 @@ public sealed class Channel : IDisposable {
                 return true;
             }
             // Ask for next fragment
-            bool SendSuccess = await SendAsync(new NextFragmentMessage(StreamMessage.ID), CancelToken);
+            bool SendSuccess = await SendAsync(new NextFragmentMessage(StreamMessage.Id), CancelToken);
             // Failed to ask for next fragment
             if (!SendSuccess) {
                 return false;
@@ -303,7 +305,7 @@ public sealed class Channel : IDisposable {
         // Respond to pings
         OnReceive += async (Message Message) => {
             if (Message is PingRequest PingRequest) {
-                await SendAsync(new PingResponse(PingRequest.ID));
+                await SendAsync(new PingResponse(PingRequest.Id));
             }
         };
         // Send pings

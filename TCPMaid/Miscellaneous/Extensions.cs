@@ -51,7 +51,7 @@ internal static class Extensions {
             // Get current fragment
             byte[] Fragment = Fragments[i];
             // Build packet
-            Packets[i] = CreatePacket(Message.ID, Fragment, Bytes.Length);
+            Packets[i] = CreatePacket(Message.Id, Fragment, Bytes.Length);
         }
         // Return packets
         return Packets;
