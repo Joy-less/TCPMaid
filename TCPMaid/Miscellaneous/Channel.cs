@@ -416,13 +416,10 @@ public sealed class Channel : IDisposable {
             return;
         }
     }
-    private sealed class PendingMessage {
-        public int TotalMessageLength;
-        public byte[] CurrentBytes;
-        public PendingMessage(int total_message_length, byte[] initial_bytes) {
-            TotalMessageLength = total_message_length;
-            CurrentBytes = initial_bytes;
-        }
+    private sealed record PendingMessage(int TotalMessageLength, byte[] CurrentBytes) {
+        public int TotalMessageLength = TotalMessageLength;
+        public byte[] CurrentBytes = CurrentBytes;
+
         public bool Incomplete => CurrentBytes.Length < TotalMessageLength;
     }
 }
