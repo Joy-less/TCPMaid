@@ -10,7 +10,7 @@ public sealed class ClientMaid : Maid, IDisposable {
     /// <summary>
     /// The preferences for this maid.
     /// </summary>
-    public new ClientOptions Options => (ClientOptions)base.Options;
+    public new ClientMaidOptions Options => (ClientMaidOptions)base.Options;
     /// <summary>
     /// Whether the client has a connected channel to the server.
     /// </summary>
@@ -36,7 +36,7 @@ public sealed class ClientMaid : Maid, IDisposable {
     /// <summary>
     /// Creates a new client maid with the given options.
     /// </summary>
-    public ClientMaid(ClientOptions? options = null) : base(options ?? new ClientOptions()) {
+    public ClientMaid(ClientMaidOptions? options = null) : base(options ?? new ClientMaidOptions()) {
     }
     /// <summary>
     /// Attempts to connect to the server.
@@ -112,7 +112,7 @@ public sealed class ClientMaid : Maid, IDisposable {
 /// <summary>
 /// The preferences for a client maid.
 /// </summary>
-public sealed class ClientOptions : Options {
+public sealed class ClientMaidOptions : MaidOptions {
     /// <summary>
     /// Whether to use the server certificate to encrypt the connection.<br/>
     /// Default: <see langword="false"/>

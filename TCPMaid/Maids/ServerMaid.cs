@@ -12,7 +12,7 @@ public sealed class ServerMaid : Maid, IDisposable {
     /// <summary>
     /// The preferences for this maid.
     /// </summary>
-    public new ServerOptions Options => (ServerOptions)base.Options;
+    public new ServerMaidOptions Options => (ServerMaidOptions)base.Options;
     /// <summary>
     /// Whether the server is started.
     /// </summary>
@@ -45,7 +45,7 @@ public sealed class ServerMaid : Maid, IDisposable {
     /// <summary>
     /// Creates a new server maid with the given options.
     /// </summary>
-    public ServerMaid(ServerOptions? options = null) : base(options ?? new ServerOptions()) {
+    public ServerMaid(ServerMaidOptions? options = null) : base(options ?? new ServerMaidOptions()) {
     }
     /// <summary>
     /// Starts listening for clients on the given port, unless already running.
@@ -182,7 +182,7 @@ public sealed class ServerMaid : Maid, IDisposable {
 /// <summary>
 /// The preferences for a server maid.
 /// </summary>
-public sealed class ServerOptions : Options {
+public sealed class ServerMaidOptions : MaidOptions {
     /// <summary>
     /// The certificate used for encryption. Ensure the client has SSL enabled.<br/>
     /// Default: <see langword="null"/>

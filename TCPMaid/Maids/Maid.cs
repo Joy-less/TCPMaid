@@ -4,16 +4,16 @@
 /// The base class for maids that help setup channels.
 /// </summary>
 public abstract class Maid {
-    internal Options Options { get; }
+    internal MaidOptions Options { get; }
 
-    internal Maid(Options options) {
+    internal Maid(MaidOptions options) {
         Options = options;
     }
 }
 /// <summary>
 /// The base class for maid preferences.
 /// </summary>
-public abstract class Options {
+public abstract class MaidOptions {
     /// <summary>
     /// How many seconds of silence before a connection is dropped.<br/>
     /// Default: 10

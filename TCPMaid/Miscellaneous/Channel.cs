@@ -336,7 +336,7 @@ public sealed class Channel : IDisposable {
                 PendingBytes.AddRange(await Stream.ReadBytesAsync(Maid.Options.BufferSize, TimeoutTokenSource.Token));
 
                 // Limit memory usage on server
-                if (Maid.Options is ServerOptions ServerOptions) {
+                if (Maid.Options is ServerMaidOptions ServerOptions) {
                     // Calculate total bytes used in pending messages from client
                     int PendingSize = PendingBytes.Count + PendingMessages.Sum(PendingMessage => PendingMessage.Value.CurrentBytes.Length);
                     // Check if total exceeds limit
