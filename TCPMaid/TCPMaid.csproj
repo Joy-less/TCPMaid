@@ -31,6 +31,6 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="MemoryPack" Version="1.21.1" />
+    <PackageReference Include="MemoryPack" Version="1.21.3" />
   </ItemGroup>
 </Project>
