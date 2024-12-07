@@ -187,15 +187,15 @@ public sealed class ServerMaidOptions : MaidOptions {
     /// The certificate used for encryption. Ensure the client has SSL enabled.<br/>
     /// Default: <see langword="null"/>
     /// </summary>
-    public X509Certificate2? Certificate = null;
+    public X509Certificate2? Certificate { get; set; } = null;
     /// <summary>
     /// The maximum number of clients that can connect to the server at once.<br/>
     /// Default: <see langword="null"/>
     /// </summary>
-    public int? MaxClients = null;
+    public int? MaxClients { get; set; } = null;
     /// <summary>
     /// The maximum number of pending bytes from a client before it is disconnected.<br/>
     /// Default: 3MB
     /// </summary>
-    public int MaxPendingSize = 3_000_000;
+    public int MaxPendingSize { get; set; } = 3_000_000;
 }
