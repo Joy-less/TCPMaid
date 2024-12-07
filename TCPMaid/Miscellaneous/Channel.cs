@@ -344,14 +344,14 @@ public sealed class Channel : IDisposable {
                         break;
                     }
                     // Get length of fragment
-                    int FragmentLength = BitConverter.ToInt32(PendingBytes.GetRange(0, sizeof(int)).ToArray());
+                    int FragmentLength = BitConverter.ToInt32([.. PendingBytes.GetRange(0, sizeof(int))]);
 
                     // Ensure fragment is complete
                     if (PendingBytes.Count < sizeof(int) + FragmentLength) {
                         break;
                     }
                     // Get fragment
-                    byte[] Fragment = PendingBytes.GetRange(sizeof(int), FragmentLength).ToArray();
+                    byte[] Fragment = [.. PendingBytes.GetRange(sizeof(int), FragmentLength)];
 
                     // Remove length and fragment
                     PendingBytes.RemoveRange(0, sizeof(int) + FragmentLength);
@@ -365,7 +365,7 @@ public sealed class Channel : IDisposable {
                     if (PendingMessages.TryGetValue(MessageId, out PendingMessage? PendingMessage)) {
                         // Update pending message
                         PendingMessage.TotalMessageLength = TotalMessageLength;
-                        PendingMessage.CurrentBytes = Concat(PendingMessage.CurrentBytes, Fragment[sizeof(long)..]);
+                        PendingMessage.CurrentBytes = Concat(PendingMessage.CurrentBytes, FragmentData);
                     }
                     // New message
                     else {
