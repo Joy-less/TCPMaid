@@ -1,18 +1,14 @@
 <Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
-    <TargetFrameworks>netstandard2.1;net6.0;net7.0;net8.0</TargetFrameworks>
-    <RootNamespace>TCPMaid</RootNamespace>
+    <VersionPrefix>3.0</VersionPrefix>
+    <TargetFrameworks>net6.0;net7.0;net8.0;net9.0;netstandard2.1</TargetFrameworks>
+    <LangVersion>latest</LangVersion>
     <ImplicitUsings>enable</ImplicitUsings>
-    <LangVersion>12</LangVersion>
     <Nullable>enable</Nullable>
     <NoWarn>1701;1702;CS1591;CS1573;IDE0290;IDE0305</NoWarn>
     <WarningLevel>9999</WarningLevel>
-    <SignAssembly>False</SignAssembly>
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
     <Title>TCPMaid</Title>
-    <FileVersion></FileVersion>
-    <Version>2.4.1</Version>
     <Authors>Joyless</Authors>
     <PackageTags>TCP; Server; Client; Netcode; Networking; Multiplayer; SSL; TLS</PackageTags>
     <Description>An easy, powerful and lightweight TCP client/server in C#.</Description>
@@ -20,11 +16,10 @@
     <RepositoryUrl>https://github.com/Joy-less/TCPMaid</RepositoryUrl>
     <PackageIcon>Icon.png</PackageIcon>
     <PackageReadmeFile>README.md</PackageReadmeFile>
-    <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageRequireLicenseAcceptance>True</PackageRequireLicenseAcceptance>
     <GenerateDocumentationFile>True</GenerateDocumentationFile>
   </PropertyGroup>
-
   <ItemGroup>
     <None Include="..\Assets\Icon.png">
       <Pack>True</Pack>
@@ -35,9 +30,7 @@
       <PackagePath>\</PackagePath>
     </None>
   </ItemGroup>
-
   <ItemGroup>
     <PackageReference Include="MemoryPack" Version="1.21.1" />
   </ItemGroup>
-
 </Project>
