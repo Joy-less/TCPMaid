@@ -196,12 +196,14 @@ public sealed class Channel : IDisposable {
     /// </summary>
     /// <returns>An estimate of the channel's latency (half of the round trip time).</returns>
     public async Task<double> PingAsync(CancellationToken CancelToken = default) {
-        // Create timer
-        Stopwatch Timer = Stopwatch.StartNew();
+        // Get send timestamp
+        long SendTimestamp = Stopwatch.GetTimestamp();
         // Request ping response
         await RequestAsync<PingResponse>(new PingRequest(), CancelToken: CancelToken);
-        // Calculate round trip time
-        return Latency = Timer.Elapsed.TotalSeconds / 2;
+        // Calculate ping time
+        TimeSpan ElapsedTime = CompatibilityExtensions.GetElapsedTime(SendTimestamp, Stopwatch.GetTimestamp());
+        // Get round trip time
+        return Latency = ElapsedTime.TotalSeconds / 2;
     }
     /// <summary>
     /// Sends bytes from a stream to the remote in a series of <see cref="StreamMessage"/>s, useful for sending large files.
