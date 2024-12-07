@@ -36,13 +36,9 @@ public sealed class Channel : IDisposable {
     /// </summary>
     public bool Connected { get; private set; } = true;
     /// <summary>
-    /// The time in seconds for a message to reach the remote, estimated by half of the last <see cref="PingRequest"/>'s round trip time.
+    /// The time taken for a message to reach the remote, estimated by half of the last <see cref="PingRequest"/>'s round trip time.
     /// </summary>
-    public double Latency { get; private set; } = -1;
-    /// <summary>
-    /// The time in milliseconds for a message to reach the remote, estimated by half of the last <see cref="PingRequest"/>'s round trip time.
-    /// </summary>
-    public int LatencyMs => (int)Math.Round(Latency * 1000);
+    public TimeSpan Latency { get; private set; } = TimeSpan.Zero;
     /// <summary>
     /// Whether the server is using a certificate to encrypt the channel stream.
     /// </summary>
@@ -195,7 +191,7 @@ public sealed class Channel : IDisposable {
     /// Sends a <see cref="PingRequest"/> to the remote and waits for a <see cref="PingResponse"/>.
     /// </summary>
     /// <returns>An estimate of the channel's latency (half of the round trip time).</returns>
-    public async Task<double> PingAsync(CancellationToken CancelToken = default) {
+    public async Task<TimeSpan> PingAsync(CancellationToken CancelToken = default) {
         // Get send timestamp
         long SendTimestamp = Stopwatch.GetTimestamp();
         // Request ping response
@@ -203,7 +199,7 @@ public sealed class Channel : IDisposable {
         // Calculate ping time
         TimeSpan ElapsedTime = CompatibilityExtensions.GetElapsedTime(SendTimestamp, Stopwatch.GetTimestamp());
         // Get round trip time
-        return Latency = ElapsedTime.TotalSeconds / 2;
+        return Latency = ElapsedTime / 2;
     }
     /// <summary>
     /// Sends bytes from a stream to the remote in a series of <see cref="StreamMessage"/>s, useful for sending large files.
