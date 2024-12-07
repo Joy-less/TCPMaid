@@ -322,7 +322,7 @@ public sealed class Channel : IDisposable {
             }
         };
 
-        // Create collections for bytes waiting to be processed
+        // Track bytes waiting to be processed
         List<byte> PendingBytes = [];
         Dictionary<long, PendingMessage> PendingMessages = [];
 
@@ -349,26 +349,26 @@ public sealed class Channel : IDisposable {
                         break;
                     }
                     // Get fragment
-                    byte[] Fragment = [.. PendingBytes.GetRange(sizeof(int), FragmentLength)];
+                    ReadOnlySpan<byte> Fragment = [.. PendingBytes.GetRange(sizeof(int), FragmentLength)];
 
                     // Remove length and fragment
                     PendingBytes.RemoveRange(0, sizeof(int) + FragmentLength);
 
                     // Get fragment data
-                    long MessageId = BitConverter.ToInt64(Fragment, 0);
-                    int TotalMessageLength = BitConverter.ToInt32(Fragment, sizeof(long));
-                    byte[] FragmentData = Fragment[(sizeof(long) + sizeof(int))..];
+                    long MessageId = BitConverter.ToInt64(Fragment);
+                    int TotalMessageLength = BitConverter.ToInt32(Fragment[sizeof(long)..]);
+                    ReadOnlySpan<byte> FragmentData = Fragment[(sizeof(long) + sizeof(int))..];
 
                     // Existing message
                     if (PendingMessages.TryGetValue(MessageId, out PendingMessage? PendingMessage)) {
                         // Update pending message
                         PendingMessage.TotalMessageLength = TotalMessageLength;
-                        PendingMessage.CurrentBytes = Concat(PendingMessage.CurrentBytes, FragmentData);
+                        PendingMessage.CurrentBytes = Concat(PendingMessage.CurrentBytes, [.. FragmentData]);
                     }
                     // New message
                     else {
                         // Create pending message
-                        PendingMessage = new PendingMessage(TotalMessageLength, FragmentData);
+                        PendingMessage = new PendingMessage(TotalMessageLength, [.. FragmentData]);
                         // Add pending message
                         PendingMessages.Add(MessageId, PendingMessage);
                     }
