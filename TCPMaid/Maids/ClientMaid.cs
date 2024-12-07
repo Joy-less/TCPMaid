@@ -117,10 +117,10 @@ public sealed class ClientOptions : Options {
     /// Whether to use the server certificate to encrypt the connection.<br/>
     /// Default: <see langword="false"/>
     /// </summary>
-    public bool SSL = false;
+    public bool SSL { get; set; } = false;
     /// <summary>
     /// The common name of the server certificate. Defaults to the server address if <see langword="null"/>.<br/>
     /// Default: <see langword="null"/>
     /// </summary>
-    public string? ServerName = null;
+    public string? ServerName { get; set; } = null;
 }

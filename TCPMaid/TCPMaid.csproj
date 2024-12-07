@@ -5,7 +5,7 @@
     <LangVersion>latest</LangVersion>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <NoWarn>1701;1702;CS1591;CS1573;IDE0290;IDE0305</NoWarn>
+    <NoWarn>1701;1702;CS1591;CS1573;IDE0290;IDE0305;IDE0130</NoWarn>
     <WarningLevel>9999</WarningLevel>
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
     <Title>TCPMaid</Title>

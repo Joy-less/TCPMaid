@@ -11,7 +11,7 @@ public abstract class Message(ulong? ID = null) {
     /// <summary>
     /// The generated identifier for the message. If this is a response, it should be set to the ID of the request.
     /// </summary>
-    public ulong ID = ID ?? GenerateID();
+    public ulong ID { get; } = ID ?? GenerateID();
 
     private static readonly Dictionary<string, Type> MessageTypes = GetMessageTypes();
     private static ulong LastID;

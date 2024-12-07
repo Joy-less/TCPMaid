@@ -4,14 +4,16 @@ namespace TCPMaid;
 
 [MemoryPackable]
 public sealed partial class DisconnectMessage : Message {
-    public readonly string Reason;
+    public string Reason { get; }
+
     internal DisconnectMessage(string Reason) {
         this.Reason = Reason;
     }
 }
 [MemoryPackable]
 public sealed partial class NextFragmentMessage : Message {
-    public readonly ulong MessageID;
+    public ulong MessageID { get; }
+
     internal NextFragmentMessage(ulong MessageID) {
         this.MessageID = MessageID;
     }
@@ -26,9 +28,10 @@ public sealed partial class PingResponse : Message {
 }
 [MemoryPackable]
 public sealed partial class StreamMessage : Message {
-    public string Identifier;
-    public long TotalLength;
-    public byte[] Fragment;
+    public string Identifier { get; }
+    public long TotalLength { get; }
+    public byte[] Fragment { get; }
+
     internal StreamMessage(ulong ID, string Identifier, long TotalLength, byte[] Fragment) : base(ID) {
         this.Identifier = Identifier;
         this.TotalLength = TotalLength;

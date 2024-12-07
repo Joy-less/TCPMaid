@@ -13,23 +13,23 @@ public sealed class Channel : IDisposable {
     /// <summary>
     /// The maid this channel belongs to.
     /// </summary>
-    public readonly Maid Maid;
+    public Maid Maid { get; }
     /// <summary>
     /// On the server, this is the remote client. On the client, this is the local client.
     /// </summary>
-    public readonly TcpClient Client;
+    public TcpClient Client { get; }
     /// <summary>
     /// A thread-safe <see cref="SslStream"/> or <see cref="NetworkStream"/>.
     /// </summary>
-    public readonly Stream Stream;
+    public Stream Stream { get; }
     /// <summary>
     /// The IP address and port of the remote connection.
     /// </summary>
-    public readonly IPEndPoint RemotePoint;
+    public IPEndPoint RemotePoint { get; }
     /// <summary>
     /// The IP address and port of the local connection.
     /// </summary>
-    public readonly IPEndPoint LocalPoint;
+    public IPEndPoint LocalPoint { get; }
 
     /// <summary>
     /// Whether the channel is still open to send and receive messages.

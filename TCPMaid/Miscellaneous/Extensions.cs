@@ -80,7 +80,7 @@ internal static class Extensions {
         try {
             // Read bytes into buffer
             // Note: cancel token is passed to Task.Run, because NetworkStream.ReadAsync's cancel token does nothing.
-            int BytesRead = await Task.Run(async() => await Stream.ReadAsync(ReceiveBuffer, CancelToken), CancelToken);
+            int BytesRead = await Task.Run(async () => await Stream.ReadAsync(ReceiveBuffer, CancelToken), CancelToken);
             // Return bytes
             return ReceiveBuffer[..BytesRead];
         }

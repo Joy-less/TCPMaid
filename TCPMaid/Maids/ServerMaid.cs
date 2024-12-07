@@ -39,8 +39,8 @@ public sealed class ServerMaid : Maid, IDisposable {
     /// </summary>
     public event Action<Channel, Message>? OnReceive;
 
-    private TcpListener? Listener;
     private readonly ConcurrentDictionary<Channel, byte> Channels = new();
+    private TcpListener? Listener;
 
     /// <summary>
     /// Creates a new server maid with the given options.
