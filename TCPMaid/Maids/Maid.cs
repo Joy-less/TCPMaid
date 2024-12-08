@@ -1,4 +1,4 @@
-﻿namespace TCPMaid;
+namespace TCPMaid;
 
 /// <summary>
 /// The base class for maids that help setup channels.

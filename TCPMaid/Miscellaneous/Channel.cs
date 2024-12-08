@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
 using System.Net.Security;
@@ -375,7 +375,7 @@ public sealed class Channel : IDisposable {
 
                     // Invoke fragment received with pending message
                     OnReceiveFragment?.Invoke(MessageId, PendingMessage.CurrentBytes.Length, PendingMessage.TotalMessageLength);
-                    
+
                     // Ensure message is complete
                     if (PendingMessage.Incomplete) {
                         // Ask for next fragment

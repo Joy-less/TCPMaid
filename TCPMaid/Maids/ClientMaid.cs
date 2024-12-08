@@ -1,4 +1,4 @@
-﻿using System.Net.Sockets;
+using System.Net.Sockets;
 using System.Net.Security;
 
 namespace TCPMaid;
@@ -47,7 +47,7 @@ public sealed class ClientMaid : Maid, IDisposable {
     public async Task<bool> ConnectAsync(string ServerAddress, int ServerPort) {
         // Fail if already connected
         if (Connected) return false;
-            
+
         // Create channel
         TcpClient? TCPClient = null;
         NetworkStream? NetworkStream = null;

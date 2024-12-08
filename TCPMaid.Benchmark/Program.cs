@@ -1,4 +1,4 @@
-﻿using TCPMaid;
+using TCPMaid;
 using MemoryPack;
 
 // Initialise server

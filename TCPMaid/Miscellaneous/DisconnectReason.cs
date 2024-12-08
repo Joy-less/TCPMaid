@@ -1,4 +1,4 @@
-﻿namespace TCPMaid;
+namespace TCPMaid;
 
 /// <summary>
 /// A collection of common disconnect reasons.
