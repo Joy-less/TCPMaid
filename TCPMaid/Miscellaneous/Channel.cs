@@ -169,7 +169,7 @@ public sealed class Channel : IDisposable {
     /// <returns>
     /// <typeparamref name="TMessage"/>, or <see langword="null"/> if cancelled or the channel was disconnected.
     /// </returns>
-    public async Task<TMessage?> WaitAsync<TMessage>(Predicate<TMessage>? Where = null, CancellationToken CancelToken = default) where TMessage : Message {
+    public async Task<TMessage?> WaitAsync<TMessage>(Func<TMessage, bool>? Where = null, CancellationToken CancelToken = default) where TMessage : Message {
         // Create receive signal
         TaskCompletionSource<TMessage?> OnComplete = new();
         // Filter received messages

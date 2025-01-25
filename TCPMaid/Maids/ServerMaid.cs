@@ -86,21 +86,21 @@ public sealed class ServerMaid : Maid, IDisposable {
     /// <summary>
     /// Sends a message to every connected client.
     /// </summary>
-    public async Task BroadcastAsync(Message Message, Channel? Exclude = null, Predicate<Channel>? ExcludeWhere = null) {
+    public async Task BroadcastAsync(Message Message, Channel? Exclude = null, Func<Channel, bool>? ExcludeWhere = null) {
         // Send message to each client
         await ForEachClientAsync(Client => Client.SendAsync(Message), Exclude, ExcludeWhere).ConfigureAwait(false);
     }
     /// <summary>
     /// Disconnects every connected client.
     /// </summary>
-    public async Task DisconnectAllAsync(string Reason = DisconnectReason.None, Channel? Exclude = null, Predicate<Channel>? ExcludeWhere = null) {
+    public async Task DisconnectAllAsync(string Reason = DisconnectReason.None, Channel? Exclude = null, Func<Channel, bool>? ExcludeWhere = null) {
         // Disconnect each client
         await ForEachClientAsync(Client => Client.DisconnectAsync(Reason), Exclude, ExcludeWhere).ConfigureAwait(false);
     }
     /// <summary>
     /// Runs an asynchronous action for every connected client.
     /// </summary>
-    public async Task ForEachClientAsync(Func<Channel, Task> Action, Channel? Exclude, Predicate<Channel>? ExcludeWhere) {
+    public async Task ForEachClientAsync(Func<Channel, Task> Action, Channel? Exclude, Func<Channel, bool>? ExcludeWhere) {
         // Start action for each client
         List<Task> Tasks = new(Clients.Count);
         foreach (Channel Client in Clients) {
