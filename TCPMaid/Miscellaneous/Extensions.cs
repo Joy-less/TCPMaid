@@ -6,9 +6,13 @@ internal static class Extensions {
     /// <summary>
     /// Merges multiple arrays into one array.
     /// </summary>
-    public static T[] Concat<T>(params T[][] Arrays) {
+    public static T[] Concat<T>(params ReadOnlySpan<T[]> Arrays) {
+        // Get total length of merged array
+        int MergedLength = 0;
+        foreach (T[] Array in Arrays) {
+            MergedLength += Array.Length;
+        }
         // Create merged array
-        int MergedLength = Arrays.Sum(Array => Array.Length);
         T[] MergedArray = new T[MergedLength];
         // Copy arrays to merged array
         int CurrentIndex = 0;
