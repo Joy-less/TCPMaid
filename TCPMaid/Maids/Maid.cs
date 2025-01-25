@@ -21,9 +21,9 @@ public abstract class MaidOptions {
     public double Timeout { get; set; } = 10;
     /// <summary>
     /// The size of the network buffer in bytes. Uses more memory, but receives large messages faster.<br/>
-    /// Default: 100kB
+    /// Default: 50kB
     /// </summary>
-    public int BufferSize { get; set; } = 100_000;
+    public int BufferSize { get; set; } = 50_000;
     /// <summary>
     /// The maximum size of a message in bytes before breaking it up to avoid congestion.<br/>
     /// Default: 1MB
