@@ -102,7 +102,7 @@ public sealed class ServerMaid : Maid, IDisposable {
     /// </summary>
     public async Task ForEachClientAsync(Func<Channel, Task> Action, Channel? Exclude, Predicate<Channel>? ExcludeWhere) {
         // Start action for each client
-        List<Task> Tasks = [];
+        List<Task> Tasks = new(Clients.Count);
         foreach (Channel Client in Clients) {
             if (Client != Exclude && (ExcludeWhere is null || !ExcludeWhere(Client))) {
                 Tasks.Add(Action(Client));
