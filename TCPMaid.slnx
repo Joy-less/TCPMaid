@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="TCPMaid.Benchmark/TCPMaid.Benchmark.csproj" />
+  <Project Path="TCPMaid/TCPMaid.csproj" />
+</Solution>
