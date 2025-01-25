@@ -39,7 +39,7 @@ public sealed class ServerMaid : Maid, IDisposable {
     /// </summary>
     public event Action<Channel, Message>? OnReceive;
 
-    private readonly ConcurrentDictionary<Channel, byte> Channels = new();
+    private readonly ConcurrentDictionary<Channel, byte> Channels = [];
     private TcpListener? TcpListener;
 
     /// <summary>
