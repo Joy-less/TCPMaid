@@ -4,7 +4,7 @@ using System.Net.Security;
 namespace TCPMaid;
 
 /// <summary>
-/// A maid that helps setup a channel to the server.
+/// A maid that helps setup a channel to a server.
 /// </summary>
 public sealed class ClientMaid : Maid, IDisposable {
     /// <summary>
@@ -45,7 +45,7 @@ public sealed class ClientMaid : Maid, IDisposable {
     /// <summary>
     /// Attempts to connect to the server.
     /// </summary>
-    /// <param name="ServerAddress">The URL or IP address of the server.</param>
+    /// <param name="ServerAddress">The domain or IP address of the server.</param>
     /// <param name="ServerPort">The port number the server is listening on.</param>
     /// <returns>
     /// <see langword="true"/> if connected successfully; <see langword="false"/> otherwise.
