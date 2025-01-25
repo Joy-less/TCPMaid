@@ -59,9 +59,9 @@ public sealed class ClientMaid : Maid, IDisposable {
         NetworkStream? NetworkStream = null;
         SslStream? SslStream = null;
         try {
-            // Create TCPClient
+            // Create TCP client
             TcpClient = new TcpClient() { NoDelay = true };
-            // Connect TCPClient
+            // Connect TCP client
             await TcpClient.ConnectAsync(ServerAddress, ServerPort).ConfigureAwait(false);
             // Get the network stream
             NetworkStream = TcpClient.GetStream();
