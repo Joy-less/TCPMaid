@@ -74,7 +74,7 @@ public sealed class ServerMaid : Maid, IDisposable {
         // Disconnect from all clients
         _ = DisconnectAllAsync(DisconnectReason.ServerShutdown);
         // Stop listener
-        TcpListener?.Stop();
+        TcpListener?.Dispose();
         TcpListener = null;
         // Invoke stop event
         OnStop?.Invoke();
