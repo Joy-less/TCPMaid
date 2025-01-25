@@ -153,7 +153,7 @@ public sealed class ServerMaid : Maid, IDisposable {
         }
 
         // Disconnect if there are too many clients
-        if (Options.MaxClients is not null && Clients.Count >= Options.MaxClients) {
+        if (Clients.Count >= Options.MaxClients) {
             await Channel.DisconnectAsync(DisconnectReason.TooManyClients).ConfigureAwait(false);
             return;
         }
@@ -194,9 +194,9 @@ public sealed class ServerMaidOptions : MaidOptions {
     public X509Certificate2? Certificate { get; set; } = null;
     /// <summary>
     /// The maximum number of clients that can connect to the server at once.<br/>
-    /// Default: <see langword="null"/>
+    /// Default: ∞
     /// </summary>
-    public int? MaxClients { get; set; } = null;
+    public int MaxClients { get; set; } = int.MaxValue;
     /// <summary>
     /// The maximum number of pending bytes from a client before it is disconnected.<br/>
     /// Default: 3MB
