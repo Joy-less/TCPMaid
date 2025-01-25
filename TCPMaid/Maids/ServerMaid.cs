@@ -193,7 +193,7 @@ public sealed class ServerMaid : Maid, IDisposable {
 /// <summary>
 /// The preferences for a server maid.
 /// </summary>
-public sealed class ServerMaidOptions : MaidOptions {
+public sealed record ServerMaidOptions : MaidOptions {
     /// <summary>
     /// The certificate used for encryption.<br/>
     /// Default: <see langword="null"/>

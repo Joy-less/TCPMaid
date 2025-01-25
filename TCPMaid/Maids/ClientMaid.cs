@@ -115,7 +115,7 @@ public sealed class ClientMaid : Maid, IDisposable {
 /// <summary>
 /// The preferences for a client maid.
 /// </summary>
-public sealed class ClientMaidOptions : MaidOptions {
+public sealed record ClientMaidOptions : MaidOptions {
     /// <summary>
     /// Whether to use the server certificate to encrypt the connection.<br/>
     /// Default: <see langword="false"/>

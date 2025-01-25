@@ -19,7 +19,7 @@ public abstract class Maid : IDisposable {
 /// <summary>
 /// The base class for maid preferences.
 /// </summary>
-public abstract class MaidOptions {
+public abstract record MaidOptions {
     /// <summary>
     /// How many seconds of silence before a connection is dropped.<br/>
     /// Default: 10
