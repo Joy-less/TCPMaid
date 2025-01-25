@@ -24,12 +24,15 @@ TCPMaid makes it easy to setup a robust client & server, send messages and reque
 #### Client
 ```cs
 public static async void Client() {
-    // Connect client to server
-    ClientMaid Client = new();
+    // Connect to server
+    using ClientMaid Client = new();
     await Client.ConnectAsync("localhost", 5000);
 
     // Say hello to server
     await Client.Channel!.SendAsync(new ExampleMessage("hello server!"));
+
+    // Disconnect from server
+    await Client.Channel!.DisconnectAsync();
 }
 ```
 #### Server
