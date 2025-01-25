@@ -45,7 +45,7 @@ public sealed class ServerMaid : Maid, IDisposable {
     /// <summary>
     /// Creates a new server maid with the given options.
     /// </summary>
-    public ServerMaid(ServerMaidOptions? options = null) : base(options ?? new ServerMaidOptions()) {
+    public ServerMaid(ServerMaidOptions? Options = null) : base(Options ?? new ServerMaidOptions()) {
     }
     /// <inheritdoc/>
     public override void Dispose() {
@@ -146,12 +146,12 @@ public sealed class ServerMaid : Maid, IDisposable {
                 // Authenticate stream
                 await SslStream.AuthenticateAsServerAsync(Certificate, clientCertificateRequired: false, checkCertificateRevocation: true).ConfigureAwait(false);
                 // Create encrypted channel
-                Channel = new Channel(this, TcpClient, SslStream);
+                Channel = new Channel(this, TcpClient, SslStream, IsSsl: true);
             }
             // Plain
             else {
                 // Create plain channel
-                Channel = new Channel(this, TcpClient, NetworkStream);
+                Channel = new Channel(this, TcpClient, NetworkStream, IsSsl: false);
             }
         }
         // Failed to create channel

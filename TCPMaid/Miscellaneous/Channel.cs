@@ -24,6 +24,10 @@ public sealed class Channel : IDisposable {
     /// </summary>
     public Stream Stream { get; }
     /// <summary>
+    /// Whether <see cref="Stream"/> is encrypted with a server certificate.
+    /// </summary>
+    public bool IsSsl { get; }
+    /// <summary>
     /// The IP address and port of the remote connection.
     /// </summary>
     public IPEndPoint RemotePoint { get; }
@@ -40,10 +44,6 @@ public sealed class Channel : IDisposable {
     /// The time taken for a message to reach the remote, estimated by half of the last <see cref="PingRequest"/>'s round trip time.
     /// </summary>
     public TimeSpan Latency { get; private set; } = TimeSpan.Zero;
-    /// <summary>
-    /// Whether the server is using a certificate to encrypt the channel stream.
-    /// </summary>
-    public bool Encrypted => Stream is SslStream;
 
     /// <summary>
     /// Triggers when the channel is abandoned. (Reason, ByRemote)
@@ -61,16 +61,18 @@ public sealed class Channel : IDisposable {
     /// <summary>
     /// Creates a new channel that listens to the given stream.
     /// </summary>
-    public Channel(Maid maid, TcpClient client, Stream stream) {
-        Maid = maid;
-        Client = client;
-        Stream = Stream.Synchronized(stream);
+    internal Channel(Maid Maid, TcpClient Client, Stream Stream, bool IsSsl) {
+        this.Maid = Maid;
+        this.Client = Client;
+        this.Stream = Stream.Synchronized(Stream);
+        this.IsSsl = IsSsl;
         RemotePoint = (IPEndPoint)Client.Client.RemoteEndPoint!;
         LocalPoint = (IPEndPoint)Client.Client.LocalEndPoint!;
 
         _ = PingPongAsync();
         _ = ListenAsync();
     }
+
     /// <summary>
     /// Serialises and sends a message to the remote.
     /// </summary>

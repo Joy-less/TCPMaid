@@ -6,8 +6,8 @@ namespace TCPMaid;
 public abstract class Maid : IDisposable {
     public MaidOptions Options { get; }
 
-    internal Maid(MaidOptions options) {
-        Options = options;
+    internal Maid(MaidOptions Options) {
+        this.Options = Options;
     }
 
     /// <summary>

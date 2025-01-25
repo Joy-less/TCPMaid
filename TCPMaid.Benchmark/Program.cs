@@ -33,6 +33,12 @@ while (true) {
     };
     await Client.ConnectAsync("127.0.0.1", 12345);
     //await Task.Delay(1000);
+
+    /*if (Server.Clients.Count > 300) {
+        while (true) {
+            await Task.Delay(100);
+        }
+    }*/
 }
 
 [MemoryPackable]
