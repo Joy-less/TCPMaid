@@ -185,9 +185,12 @@ public sealed class ServerMaid : Maid, IDisposable {
 /// </summary>
 public sealed class ServerMaidOptions : MaidOptions {
     /// <summary>
-    /// The certificate used for encryption. Ensure the client has SSL enabled.<br/>
+    /// The certificate used for encryption.<br/>
     /// Default: <see langword="null"/>
     /// </summary>
+    /// <remarks>
+    /// Ensure <see cref="ClientMaidOptions.Ssl"/> is enabled or the certificate will not be used.
+    /// </remarks>
     public X509Certificate2? Certificate { get; set; } = null;
     /// <summary>
     /// The maximum number of clients that can connect to the server at once.<br/>
