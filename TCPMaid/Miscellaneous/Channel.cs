@@ -392,7 +392,7 @@ public sealed class Channel : IDisposable {
                     OnReceiveFragment?.Invoke(MessageId, PendingMessage.CurrentBytes.Length, PendingMessage.TotalMessageLength);
 
                     // Ensure message is complete
-                    if (PendingMessage.Incomplete) {
+                    if (PendingMessage.IsIncomplete()) {
                         // Ask for next fragment
                         _ = SendAsync(new NextFragmentMessage(MessageId));
                         break;
@@ -431,10 +431,13 @@ public sealed class Channel : IDisposable {
             return;
         }
     }
-    private sealed record PendingMessage(int TotalMessageLength, byte[] CurrentBytes) {
-        public int TotalMessageLength = TotalMessageLength;
-        public byte[] CurrentBytes = CurrentBytes;
 
-        public bool Incomplete => CurrentBytes.Length < TotalMessageLength;
+    private sealed record PendingMessage(int TotalMessageLength, byte[] CurrentBytes) {
+        public int TotalMessageLength { get; set; } = TotalMessageLength;
+        public byte[] CurrentBytes { get; set; } = CurrentBytes;
+
+        public bool IsIncomplete() {
+            return CurrentBytes.Length < TotalMessageLength;
+        }
     }
 }
