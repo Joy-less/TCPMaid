@@ -130,7 +130,7 @@ public sealed class Channel : IDisposable {
         // Receive fragment callback
         void ReceiveFragment(long MessageId, int CurrentBytes, int TotalBytes) {
             if (MessageId == Request.Id) {
-                OnFragment?.Invoke(CurrentBytes, TotalBytes);
+                OnFragment.Invoke(CurrentBytes, TotalBytes);
             }
         }
 
@@ -140,7 +140,9 @@ public sealed class Channel : IDisposable {
             // Listen for messages
             OnReceive += Filter;
             // Listen for fragments
-            OnReceiveFragment += ReceiveFragment;
+            if (OnFragment is not null) {
+                OnReceiveFragment += ReceiveFragment;
+            }
             // Send request
             bool Success = await SendAsync(Request, CancelToken).ConfigureAwait(false);
             // Send failure
@@ -152,7 +154,9 @@ public sealed class Channel : IDisposable {
         }
         finally {
             // Stop listening for fragments
-            OnReceiveFragment -= ReceiveFragment;
+            if (OnFragment is not null) {
+                OnReceiveFragment -= ReceiveFragment;
+            }
             // Stop listening for messages
             OnReceive -= Filter;
             // Stop listening for disconnect
