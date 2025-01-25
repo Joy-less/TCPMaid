@@ -54,10 +54,11 @@ public abstract class Message(long? Id = null) {
     }
 
     /// <summary>
-    /// Whether the message is only for internal use.
+    /// Whether the message is only for internal <see cref="TCPMaid"/> use and should be ignored by your application.
     /// </summary>
-    [MemoryPackIgnore]
-    public bool Internal => this is DisconnectMessage or NextFragmentMessage or PingRequest or PingResponse or StreamMessage;
+    public bool IsInternal() {
+        return this is DisconnectMessage or NextFragmentMessage or PingRequest or PingResponse or StreamMessage;
+    }
 
     /// <summary>
     /// Searches the cached available assemblies for a message type with the given name.

@@ -27,7 +27,7 @@ while (true) {
         Console.WriteLine("Connected!");
     };
     Client.OnReceive += (Message) => {
-        if (!Message.Internal) {
+        if (!Message.IsInternal()) {
             //Console.WriteLine(Message.GetType().Name);
         }
     };
