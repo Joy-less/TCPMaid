@@ -43,7 +43,9 @@ public sealed class ClientMaid : Maid, IDisposable {
     /// </summary>
     /// <param name="ServerAddress">The URL or IP address of the server.</param>
     /// <param name="ServerPort">The port number the server is listening on.</param>
-    /// <returns><see langword="true"/> if connected successfully; <see langword="false"/> otherwise.</returns>
+    /// <returns>
+    /// <see langword="true"/> if connected successfully; <see langword="false"/> otherwise.
+    /// </returns>
     public async Task<bool> ConnectAsync(string ServerAddress, int ServerPort) {
         // Fail if already connected
         if (Connected) return false;
