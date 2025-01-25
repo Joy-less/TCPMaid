@@ -10,7 +10,7 @@ TCPMaid makes it easy to setup a robust client & server, send messages and reque
 
 ## Features
 - Easy client & server setup
-- Supports SSL encryption and certificates
+- Supports SSL (TLS) encryption and certificates
 - Automatically serialises messages to bytes
 - Automatically fragments large messages to avoid congestion
 - Supports requests and responses
@@ -101,6 +101,28 @@ public partial class ExampleResponse(long Id, string ExampleText) : Message(Id) 
 #### Output
 ```
 Here's my response: -.-
+```
+
+## Encryption
+
+To encrypt the connection, simply pass an `X509Certificate2` to `ServerMaidOptions` and enable `Ssl` in `ClientMaidOptions`.
+An `SslStream` (TLS) is automatically created and authenticated.
+
+#### Client
+```cs
+ClientMaid ClientMaid = new(new ClientMaidOptions() {
+    Ssl = true,
+    ServerName = "example.com" // Optional
+});
+```
+#### Server
+```cs
+ServerMaid ServerMaid = new(new ServerMaidOptions() {
+    Certificate = X509Certificate2.CreateFromPemFile(
+        certPemFilePath: "/etc/letsencrypt/live/example.com/fullchain.pem",
+        keyPemFilePath: "/etc/letsencrypt/live/example.com/privkey.pem"
+    )
+});
 ```
 
 ## Streams
