@@ -101,7 +101,7 @@ public sealed class Channel : IDisposable {
         }
         // Failed to send message
         catch (Exception) {
-            await DisconnectAsync(Silently: true).ConfigureAwait(false);
+            await DisconnectAsync(AlertRemote: false).ConfigureAwait(false);
             return false;
         }
     }
@@ -253,7 +253,7 @@ public sealed class Channel : IDisposable {
         }
         // Failed to send message
         catch (Exception) {
-            await DisconnectAsync(Silently: true).ConfigureAwait(false);
+            await DisconnectAsync(AlertRemote: false).ConfigureAwait(false);
             return false;
         }
         // Send success
@@ -293,11 +293,11 @@ public sealed class Channel : IDisposable {
     /// <summary>
     /// Sends the disconnect reason and disposes the channel.
     /// </summary>
-    public async Task DisconnectAsync(string Reason = DisconnectReason.None, bool ByRemote = false, bool Silently = false) {
+    public async Task DisconnectAsync(string Reason = DisconnectReason.None, bool ByRemote = false, bool AlertRemote = true) {
         // Debounce
         if (!Connected) return;
         // Send disconnect message
-        if (!Silently) {
+        if (AlertRemote) {
             await SendAsync(new DisconnectMessage(Reason)).ConfigureAwait(false);
         }
         // Dispose channel
@@ -337,7 +337,7 @@ public sealed class Channel : IDisposable {
         // Listen for disconnect messages
         OnReceive += (Message Message) => {
             if (Message is DisconnectMessage DisconnectMessage) {
-                _ = DisconnectAsync(DisconnectMessage.Reason, ByRemote: true, Silently: true);
+                _ = DisconnectAsync(DisconnectMessage.Reason, ByRemote: true, AlertRemote: false);
             }
         };
 
