@@ -4,7 +4,7 @@ namespace TCPMaid;
 /// The base class for maids that help setup channels.
 /// </summary>
 public abstract class Maid : IDisposable {
-    internal MaidOptions Options { get; }
+    public MaidOptions Options { get; }
 
     internal Maid(MaidOptions options) {
         Options = options;
