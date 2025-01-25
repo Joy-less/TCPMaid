@@ -88,14 +88,14 @@ public sealed class ServerMaid : Maid, IDisposable {
     /// </summary>
     public async Task BroadcastAsync(Message Message, Channel? Exclude = null, Predicate<Channel>? ExcludeWhere = null) {
         // Send message to each client
-        await ForEachClientAsync(async Client => await Client.SendAsync(Message), Exclude, ExcludeWhere).ConfigureAwait(false);
+        await ForEachClientAsync(Client => Client.SendAsync(Message), Exclude, ExcludeWhere).ConfigureAwait(false);
     }
     /// <summary>
     /// Disconnects every connected client.
     /// </summary>
     public async Task DisconnectAllAsync(string Reason = DisconnectReason.None, Channel? Exclude = null, Predicate<Channel>? ExcludeWhere = null) {
         // Disconnect each client
-        await ForEachClientAsync(async Client => await Client.DisconnectAsync(Reason), Exclude, ExcludeWhere).ConfigureAwait(false);
+        await ForEachClientAsync(Client => Client.DisconnectAsync(Reason), Exclude, ExcludeWhere).ConfigureAwait(false);
     }
     /// <summary>
     /// Runs an asynchronous action for every connected client.
