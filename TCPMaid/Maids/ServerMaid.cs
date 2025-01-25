@@ -40,7 +40,7 @@ public sealed class ServerMaid : Maid, IDisposable {
     public event Action<Channel, Message>? OnReceive;
 
     private readonly ConcurrentDictionary<Channel, byte> Channels = new();
-    private TcpListener? Listener;
+    private TcpListener? TcpListener;
 
     /// <summary>
     /// Creates a new server maid with the given options.
@@ -54,9 +54,9 @@ public sealed class ServerMaid : Maid, IDisposable {
         // Ensure server is not running
         if (Running) return;
         // Start listener
-        Listener = TcpListener.Create(Port);
-        Listener.Server.NoDelay = true;
-        Listener.Start();
+        TcpListener = TcpListener.Create(Port);
+        TcpListener.Server.NoDelay = true;
+        TcpListener.Start();
         // Accept clients
         _ = AcceptAsync();
         // Mark server as running
@@ -74,8 +74,8 @@ public sealed class ServerMaid : Maid, IDisposable {
         // Disconnect from all clients
         _ = DisconnectAllAsync(DisconnectReason.ServerShutdown);
         // Stop listener
-        Listener?.Stop();
-        Listener = null;
+        TcpListener?.Stop();
+        TcpListener = null;
         // Invoke stop event
         OnStop?.Invoke();
     }
@@ -114,39 +114,39 @@ public sealed class ServerMaid : Maid, IDisposable {
 
     private async Task AcceptAsync() {
         // Accept TCP client
-        TcpClient TCPClient = await Listener!.AcceptTcpClientAsync().ConfigureAwait(false);
+        TcpClient TcpClient = await TcpListener!.AcceptTcpClientAsync().ConfigureAwait(false);
         // Accept another TCP client
         _ = AcceptAsync();
 
         // Create channel
         NetworkStream? NetworkStream = null;
-        SslStream? SSLStream = null;
+        SslStream? SslStream = null;
         Channel? Channel = null;
         try {
             // Get the network stream
-            NetworkStream = TCPClient.GetStream();
+            NetworkStream = TcpClient.GetStream();
 
             // SSL (encrypted)
             if (Options.Certificate is X509Certificate2 Certificate) {
                 // Create SSL stream
-                SSLStream = new SslStream(NetworkStream, false);
+                SslStream = new SslStream(NetworkStream, false);
                 // Authenticate stream
-                await SSLStream.AuthenticateAsServerAsync(Certificate, clientCertificateRequired: false, checkCertificateRevocation: true).ConfigureAwait(false);
+                await SslStream.AuthenticateAsServerAsync(Certificate, clientCertificateRequired: false, checkCertificateRevocation: true).ConfigureAwait(false);
                 // Create encrypted channel
-                Channel = new Channel(this, TCPClient, SSLStream);
+                Channel = new Channel(this, TcpClient, SslStream);
             }
             // Plain
             else {
                 // Create plain channel
-                Channel = new Channel(this, TCPClient, NetworkStream);
+                Channel = new Channel(this, TcpClient, NetworkStream);
             }
         }
         // Failed to create channel
         catch (Exception) {
             // Dispose objects
-            TCPClient?.Dispose();
+            TcpClient?.Dispose();
             NetworkStream?.Dispose();
-            SSLStream?.Dispose();
+            SslStream?.Dispose();
             Channel?.Dispose();
             // Return failure
             return;

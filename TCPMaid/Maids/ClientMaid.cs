@@ -51,38 +51,38 @@ public sealed class ClientMaid : Maid, IDisposable {
         if (Connected) return false;
 
         // Create channel
-        TcpClient? TCPClient = null;
+        TcpClient? TcpClient = null;
         NetworkStream? NetworkStream = null;
-        SslStream? SSLStream = null;
+        SslStream? SslStream = null;
         try {
             // Create TCPClient
-            TCPClient = new TcpClient() { NoDelay = true };
+            TcpClient = new TcpClient() { NoDelay = true };
             // Connect TCPClient
-            await TCPClient.ConnectAsync(ServerAddress, ServerPort).ConfigureAwait(false);
+            await TcpClient.ConnectAsync(ServerAddress, ServerPort).ConfigureAwait(false);
             // Get the network stream
-            NetworkStream = TCPClient.GetStream();
+            NetworkStream = TcpClient.GetStream();
 
             // SSL (encrypted)
             if (Options.Ssl) {
                 // Create SSL stream
-                SSLStream = new SslStream(NetworkStream, false);
+                SslStream = new SslStream(NetworkStream, false);
                 // Authenticate stream
-                await SSLStream.AuthenticateAsClientAsync(Options.ServerName ?? ServerAddress).ConfigureAwait(false);
+                await SslStream.AuthenticateAsClientAsync(Options.ServerName ?? ServerAddress).ConfigureAwait(false);
                 // Create encrypted channel
-                Channel = new Channel(this, TCPClient, SSLStream);
+                Channel = new Channel(this, TcpClient, SslStream);
             }
             // Plain
             else {
                 // Create plain channel
-                Channel = new Channel(this, TCPClient, NetworkStream);
+                Channel = new Channel(this, TcpClient, NetworkStream);
             }
         }
         // Failed to create channel
         catch (Exception) {
             // Dispose objects
-            TCPClient?.Dispose();
+            TcpClient?.Dispose();
             NetworkStream?.Dispose();
-            SSLStream?.Dispose();
+            SslStream?.Dispose();
             Channel?.Dispose();
             Channel = null;
             // Return failure
