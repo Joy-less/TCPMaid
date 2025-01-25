@@ -57,10 +57,10 @@ public sealed class ServerMaid : Maid, IDisposable {
         TcpListener = TcpListener.Create(Port);
         TcpListener.Server.NoDelay = true;
         TcpListener.Start();
-        // Accept clients
-        _ = AcceptAsync();
         // Mark server as running
         Running = true;
+        // Accept clients
+        _ = AcceptLoopAsync();
         // Invoke start event
         OnStart?.Invoke();
     }
@@ -112,12 +112,21 @@ public sealed class ServerMaid : Maid, IDisposable {
     /// </summary>
     public ICollection<Channel> Clients => Channels.Keys;
 
-    private async Task AcceptAsync() {
-        // Accept TCP client
-        TcpClient TcpClient = await TcpListener!.AcceptTcpClientAsync().ConfigureAwait(false);
-        // Accept another TCP client
-        _ = AcceptAsync();
+    private async Task AcceptLoopAsync() {
+        while (Running) {
+            try {
+                // Accept TCP client
+                TcpClient TcpClient = await TcpListener!.AcceptTcpClientAsync().ConfigureAwait(false);
 
+                // Connect in background
+                _ = AcceptAsync(TcpClient);
+            }
+            catch (Exception) {
+                // Pass
+            }
+        }
+    }
+    private async Task AcceptAsync(TcpClient TcpClient) {
         // Create channel
         NetworkStream? NetworkStream = null;
         SslStream? SslStream = null;
