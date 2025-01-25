@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
 using System.Net.Security;
+using System.Runtime.InteropServices;
 using static TCPMaid.Extensions;
 
 namespace TCPMaid;
@@ -342,14 +343,14 @@ public sealed class Channel : IDisposable {
                         break;
                     }
                     // Get length of fragment
-                    int FragmentLength = BitConverter.ToInt32([.. PendingBytes.GetRange(0, sizeof(int))]);
+                    int FragmentLength = BitConverter.ToInt32(CollectionsMarshal.AsSpan(PendingBytes)[..sizeof(int)]);
 
                     // Ensure fragment is complete
                     if (PendingBytes.Count < sizeof(int) + FragmentLength) {
                         break;
                     }
                     // Get fragment
-                    ReadOnlySpan<byte> Fragment = [.. PendingBytes.GetRange(sizeof(int), FragmentLength)];
+                    ReadOnlySpan<byte> Fragment = CollectionsMarshal.AsSpan(PendingBytes).Slice(sizeof(int), FragmentLength);
 
                     // Remove length and fragment
                     PendingBytes.RemoveRange(0, sizeof(int) + FragmentLength);
