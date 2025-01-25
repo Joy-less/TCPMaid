@@ -20,11 +20,14 @@ public sealed partial class NextFragmentMessage : Message {
 }
 [MemoryPackable]
 public sealed partial class PingRequest : Message {
-    internal PingRequest() { }
+    internal PingRequest() {
+    }
 }
 [MemoryPackable]
 public sealed partial class PingResponse : Message {
-    internal PingResponse(long Id) : base(Id) { }
+    internal PingResponse(long Id)
+        : base(Id) {
+    }
 }
 [MemoryPackable]
 public sealed partial class StreamMessage : Message {
@@ -32,7 +35,8 @@ public sealed partial class StreamMessage : Message {
     public long TotalLength { get; }
     public byte[] Fragment { get; }
 
-    internal StreamMessage(long Id, string Identifier, long TotalLength, byte[] Fragment) : base(Id) {
+    internal StreamMessage(long Id, string Identifier, long TotalLength, byte[] Fragment)
+        : base(Id) {
         this.Identifier = Identifier;
         this.TotalLength = TotalLength;
         this.Fragment = Fragment;
