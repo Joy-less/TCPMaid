@@ -197,7 +197,7 @@ public sealed class Channel : IDisposable {
         // Request ping response
         await RequestAsync<PingResponse>(new PingRequest(), CancelToken: CancelToken);
         // Calculate ping time
-        TimeSpan ElapsedTime = CompatibilityExtensions.GetElapsedTime(SendTimestamp, Stopwatch.GetTimestamp());
+        TimeSpan ElapsedTime = Stopwatch.GetElapsedTime(SendTimestamp);
         // Get round trip time
         return Latency = ElapsedTime / 2;
     }
