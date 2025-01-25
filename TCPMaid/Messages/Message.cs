@@ -1,3 +1,4 @@
+using System.Collections.Frozen;
 using System.Text;
 using MemoryPack;
 using static TCPMaid.Extensions;
@@ -13,7 +14,7 @@ public abstract class Message(long? Id = null) {
     /// </summary>
     public long Id { get; set; } = Id ?? GenerateId();
 
-    private static readonly Dictionary<string, Type> MessageTypes = GetMessageTypes();
+    private static readonly FrozenDictionary<string, Type> MessageTypes = GetMessageTypes();
     private static long LastId;
 
     /// <summary>
@@ -64,13 +65,12 @@ public abstract class Message(long? Id = null) {
     /// Searches the cached available assemblies for a message type with the given name.
     /// </summary>
     public static Type? GetMessageTypeFromName(string Name) {
-        MessageTypes.TryGetValue(Name, out Type? Type);
-        return Type;
+        return MessageTypes.GetValueOrDefault(Name);
     }
 
-    private static Dictionary<string, Type> GetMessageTypes() {
+    private static FrozenDictionary<string, Type> GetMessageTypes() {
         return AppDomain.CurrentDomain.GetAssemblies().SelectMany(Asm => Asm.GetTypes())
             .Where(Type => Type.IsClass && !Type.IsAbstract && Type.IsSubclassOf(typeof(Message))
-        ).ToDictionary(Type => Type.Name);
+        ).ToFrozenDictionary(Type => Type.Name);
     }
 }
