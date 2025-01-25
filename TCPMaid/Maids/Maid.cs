@@ -10,6 +10,7 @@ public abstract class Maid {
         Options = options;
     }
 }
+
 /// <summary>
 /// The base class for maid preferences.
 /// </summary>

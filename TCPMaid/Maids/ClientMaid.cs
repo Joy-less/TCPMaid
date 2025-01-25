@@ -56,7 +56,7 @@ public sealed class ClientMaid : Maid, IDisposable {
             // Create TCPClient
             TCPClient = new TcpClient() { NoDelay = true };
             // Connect TCPClient
-            await TCPClient.ConnectAsync(ServerAddress, ServerPort);
+            await TCPClient.ConnectAsync(ServerAddress, ServerPort).ConfigureAwait(false);
             // Get the network stream
             NetworkStream = TCPClient.GetStream();
 
@@ -65,7 +65,7 @@ public sealed class ClientMaid : Maid, IDisposable {
                 // Create SSL stream
                 SSLStream = new SslStream(NetworkStream, false);
                 // Authenticate stream
-                await SSLStream.AuthenticateAsClientAsync(Options.ServerName ?? ServerAddress);
+                await SSLStream.AuthenticateAsClientAsync(Options.ServerName ?? ServerAddress).ConfigureAwait(false);
                 // Create encrypted channel
                 Channel = new Channel(this, TCPClient, SSLStream);
             }
@@ -109,6 +109,7 @@ public sealed class ClientMaid : Maid, IDisposable {
         _ = Channel?.DisconnectAsync();
     }
 }
+
 /// <summary>
 /// The preferences for a client maid.
 /// </summary>

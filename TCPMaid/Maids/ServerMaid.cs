@@ -84,14 +84,14 @@ public sealed class ServerMaid : Maid, IDisposable {
     /// </summary>
     public async Task BroadcastAsync(Message Message, Channel? Exclude = null, Predicate<Channel>? ExcludeWhere = null) {
         // Send message to each client
-        await ForEachClientAsync(async Client => await Client.SendAsync(Message), Exclude, ExcludeWhere);
+        await ForEachClientAsync(async Client => await Client.SendAsync(Message), Exclude, ExcludeWhere).ConfigureAwait(false);
     }
     /// <summary>
     /// Disconnects every connected client.
     /// </summary>
     public async Task DisconnectAllAsync(string Reason = DisconnectReason.None, Channel? Exclude = null, Predicate<Channel>? ExcludeWhere = null) {
         // Disconnect each client
-        await ForEachClientAsync(async Client => await Client.DisconnectAsync(Reason), Exclude, ExcludeWhere);
+        await ForEachClientAsync(async Client => await Client.DisconnectAsync(Reason), Exclude, ExcludeWhere).ConfigureAwait(false);
     }
     /// <summary>
     /// Runs an asynchronous action for every connected client.
@@ -105,7 +105,7 @@ public sealed class ServerMaid : Maid, IDisposable {
             }
         }
         // Wait until all actions are complete
-        await Task.WhenAll(Tasks);
+        await Task.WhenAll(Tasks).ConfigureAwait(false);
     }
     /// <summary>
     /// Gets a collection of every connected client.
@@ -114,7 +114,7 @@ public sealed class ServerMaid : Maid, IDisposable {
 
     private async Task AcceptAsync() {
         // Accept TCP client
-        TcpClient TCPClient = await Listener!.AcceptTcpClientAsync();
+        TcpClient TCPClient = await Listener!.AcceptTcpClientAsync().ConfigureAwait(false);
         // Accept another TCP client
         _ = AcceptAsync();
 
@@ -131,7 +131,7 @@ public sealed class ServerMaid : Maid, IDisposable {
                 // Create SSL stream
                 SSLStream = new SslStream(NetworkStream, false);
                 // Authenticate stream
-                await SSLStream.AuthenticateAsServerAsync(Certificate, clientCertificateRequired: false, checkCertificateRevocation: true);
+                await SSLStream.AuthenticateAsServerAsync(Certificate, clientCertificateRequired: false, checkCertificateRevocation: true).ConfigureAwait(false);
                 // Create encrypted channel
                 Channel = new Channel(this, TCPClient, SSLStream);
             }
@@ -154,7 +154,7 @@ public sealed class ServerMaid : Maid, IDisposable {
 
         // Disconnect if there are too many clients
         if (Options.MaxClients is not null && Clients.Count >= Options.MaxClients) {
-            await Channel.DisconnectAsync(DisconnectReason.TooManyClients);
+            await Channel.DisconnectAsync(DisconnectReason.TooManyClients).ConfigureAwait(false);
             return;
         }
 
@@ -179,6 +179,7 @@ public sealed class ServerMaid : Maid, IDisposable {
         Stop();
     }
 }
+
 /// <summary>
 /// The preferences for a server maid.
 /// </summary>

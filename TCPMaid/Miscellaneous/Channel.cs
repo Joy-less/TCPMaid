@@ -84,9 +84,11 @@ public sealed class Channel : IDisposable {
             // Send packets
             for (int i = 0; i < Packets.Length; i++) {
                 // Await send packet message
-                if (i != 0) await WaitAsync<NextFragmentMessage>(NextFragmentMessage => NextFragmentMessage.MessageId == Message.Id, CancelToken);
+                if (i != 0) {
+                    await WaitAsync<NextFragmentMessage>(NextFragmentMessage => NextFragmentMessage.MessageId == Message.Id, CancelToken).ConfigureAwait(false);
+                }
                 // Send packet
-                await Stream.WriteAsync(Packets[i], CancelToken);
+                await Stream.WriteAsync(Packets[i], CancelToken).ConfigureAwait(false);
             }
             // Send success!
             return true;
@@ -97,7 +99,7 @@ public sealed class Channel : IDisposable {
         }
         // Failed to send message
         catch (Exception) {
-            await DisconnectAsync(Silently: true);
+            await DisconnectAsync(Silently: true).ConfigureAwait(false);
             return false;
         }
     }
@@ -136,13 +138,13 @@ public sealed class Channel : IDisposable {
             // Listen for fragments
             OnReceiveFragment += ReceiveFragment;
             // Send request
-            bool Success = await SendAsync(Request, CancelToken);
+            bool Success = await SendAsync(Request, CancelToken).ConfigureAwait(false);
             // Send failure
             if (!Success) {
                 return null;
             }
             // Await a response
-            return await OnComplete.Task.WaitAsync(CancelToken);
+            return await OnComplete.Task.WaitAsync(CancelToken).ConfigureAwait(false);
         }
         finally {
             // Stop listening for fragments
@@ -179,7 +181,7 @@ public sealed class Channel : IDisposable {
             // Listen for messages
             OnReceive += Filter;
             // Await a matching message
-            return await OnComplete.Task.WaitAsync(CancelToken);
+            return await OnComplete.Task.WaitAsync(CancelToken).ConfigureAwait(false);
         }
         finally {
             // Stop listening for messages
@@ -196,7 +198,7 @@ public sealed class Channel : IDisposable {
         // Get send timestamp
         long SendTimestamp = Stopwatch.GetTimestamp();
         // Request ping response
-        await RequestAsync<PingResponse>(new PingRequest(), CancelToken: CancelToken);
+        await RequestAsync<PingResponse>(new PingRequest(), CancelToken: CancelToken).ConfigureAwait(false);
         // Calculate ping time
         TimeSpan ElapsedTime = Stopwatch.GetElapsedTime(SendTimestamp);
         // Get round trip time
@@ -217,16 +219,16 @@ public sealed class Channel : IDisposable {
             while (FromStream.Position < FromStream.Length) {
                 // Await send packet message
                 if (!IsFirstPacket) {
-                    await WaitAsync<NextFragmentMessage>(NextFragmentMessage => NextFragmentMessage.MessageId == MessageId, CancelToken);
+                    await WaitAsync<NextFragmentMessage>(NextFragmentMessage => NextFragmentMessage.MessageId == MessageId, CancelToken).ConfigureAwait(false);
                 }
                 // Read fragment from stream
-                byte[] Fragment = await FromStream.ReadBytesAsync(Maid.Options.MaxFragmentSize, CancelToken);
+                byte[] Fragment = await FromStream.ReadBytesAsync(Maid.Options.MaxFragmentSize, CancelToken).ConfigureAwait(false);
                 // Create stream message from fragment
                 StreamMessage StreamMessage = new(MessageId, Identifier, FromStream.Length, Fragment);
                 // Create packet from stream message
                 byte[] Packet = CreatePacket(MessageId, StreamMessage.ToBytes());
                 // Send packet
-                await Stream.WriteAsync(Packet, CancelToken);
+                await Stream.WriteAsync(Packet, CancelToken).ConfigureAwait(false);
                 // Disable first packet flag
                 IsFirstPacket = false;
             }
@@ -237,7 +239,7 @@ public sealed class Channel : IDisposable {
         }
         // Failed to send message
         catch (Exception) {
-            await DisconnectAsync(Silently: true);
+            await DisconnectAsync(Silently: true).ConfigureAwait(false);
             return false;
         }
         // Send success
@@ -251,13 +253,13 @@ public sealed class Channel : IDisposable {
     public async Task<bool> ReceiveStreamAsync(string Identifier, Stream ToStream, Action<long, long>? OnFragment = null, CancellationToken CancelToken = default) {
         while (true) {
             // Wait for stream message
-            StreamMessage? StreamMessage = await WaitAsync<StreamMessage>(StreamMessage => StreamMessage.Identifier == Identifier, CancelToken);
+            StreamMessage? StreamMessage = await WaitAsync<StreamMessage>(StreamMessage => StreamMessage.Identifier == Identifier, CancelToken).ConfigureAwait(false);
             // Wait cancelled
             if (StreamMessage is null) {
                 return false;
             }
             // Write fragment to receive stream
-            await ToStream.WriteAsync(StreamMessage.Fragment, CancelToken);
+            await ToStream.WriteAsync(StreamMessage.Fragment, CancelToken).ConfigureAwait(false);
             // Invoke receive fragment callback
             OnFragment?.Invoke(ToStream.Length, StreamMessage.TotalLength);
             // Fully received
@@ -265,7 +267,7 @@ public sealed class Channel : IDisposable {
                 return true;
             }
             // Ask for next fragment
-            bool SendSuccess = await SendAsync(new NextFragmentMessage(StreamMessage.Id), CancelToken);
+            bool SendSuccess = await SendAsync(new NextFragmentMessage(StreamMessage.Id), CancelToken).ConfigureAwait(false);
             // Failed to ask for next fragment
             if (!SendSuccess) {
                 return false;
@@ -280,7 +282,7 @@ public sealed class Channel : IDisposable {
         if (!Connected) return;
         // Send disconnect message
         if (!Silently) {
-            await SendAsync(new DisconnectMessage(Reason));
+            await SendAsync(new DisconnectMessage(Reason)).ConfigureAwait(false);
         }
         // Dispose channel
         Dispose();
@@ -304,15 +306,15 @@ public sealed class Channel : IDisposable {
         // Respond to pings
         OnReceive += async (Message Message) => {
             if (Message is PingRequest PingRequest) {
-                await SendAsync(new PingResponse(PingRequest.Id));
+                await SendAsync(new PingResponse(PingRequest.Id)).ConfigureAwait(false);
             }
         };
         // Send pings
         while (Connected) {
             // Ping
-            await PingAsync();
+            await PingAsync().ConfigureAwait(false);
             // Wait until next ping
-            await Task.Delay(TimeSpan.FromSeconds(Maid.Options.PingInterval));
+            await Task.Delay(TimeSpan.FromSeconds(Maid.Options.PingInterval)).ConfigureAwait(false);
         }
     }
     private async Task ListenAsync() {
@@ -334,7 +336,7 @@ public sealed class Channel : IDisposable {
                 // Create timeout token source
                 using CancellationTokenSource TimeoutTokenSource = new(TimeSpan.FromSeconds(Maid.Options.Timeout));
                 // Wait for bytes from the network stream
-                PendingBytes.AddRange(await Stream.ReadBytesAsync(Maid.Options.BufferSize, TimeoutTokenSource.Token));
+                PendingBytes.AddRange(await Stream.ReadBytesAsync(Maid.Options.BufferSize, TimeoutTokenSource.Token).ConfigureAwait(false));
 
                 // Extract all messages
                 while (true) {
@@ -400,7 +402,7 @@ public sealed class Channel : IDisposable {
                     // Check if total exceeds limit
                     if (PendingSize > ServerOptions.MaxPendingSize) {
                         // Disconnect client for using too much memory
-                        await DisconnectAsync(DisconnectReason.MemoryUsage);
+                        await DisconnectAsync(DisconnectReason.MemoryUsage).ConfigureAwait(false);
                         return;
                     }
                 }
@@ -408,12 +410,12 @@ public sealed class Channel : IDisposable {
         }
         // Timeout - close channel
         catch (OperationCanceledException) {
-            await DisconnectAsync(DisconnectReason.Timeout);
+            await DisconnectAsync(DisconnectReason.Timeout).ConfigureAwait(false);
             return;
         }
         // Disconnected - close channel
         catch (Exception) {
-            await DisconnectAsync();
+            await DisconnectAsync().ConfigureAwait(false);
             return;
         }
     }
