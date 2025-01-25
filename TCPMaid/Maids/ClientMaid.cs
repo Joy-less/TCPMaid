@@ -38,6 +38,10 @@ public sealed class ClientMaid : Maid, IDisposable {
     /// </summary>
     public ClientMaid(ClientMaidOptions? options = null) : base(options ?? new ClientMaidOptions()) {
     }
+    /// <inheritdoc/>
+    public override void Dispose() {
+        Channel?.Dispose();
+    }
     /// <summary>
     /// Attempts to connect to the server.
     /// </summary>
@@ -105,10 +109,6 @@ public sealed class ClientMaid : Maid, IDisposable {
         OnConnect?.Invoke(Channel);
         // Return success
         return true;
-    }
-
-    void IDisposable.Dispose() {
-        _ = Channel?.DisconnectAsync();
     }
 }
 

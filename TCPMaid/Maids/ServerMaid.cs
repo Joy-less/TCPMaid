@@ -47,6 +47,10 @@ public sealed class ServerMaid : Maid, IDisposable {
     /// </summary>
     public ServerMaid(ServerMaidOptions? options = null) : base(options ?? new ServerMaidOptions()) {
     }
+    /// <inheritdoc/>
+    public override void Dispose() {
+        Stop();
+    }
     /// <summary>
     /// Starts listening for clients on the given port, unless already running.
     /// </summary>
@@ -183,9 +187,6 @@ public sealed class ServerMaid : Maid, IDisposable {
         Channels.TryAdd(Channel, 0);
         // Invoke connect event
         OnConnect?.Invoke(Channel);
-    }
-    void IDisposable.Dispose() {
-        Stop();
     }
 }
 
