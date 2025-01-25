@@ -63,7 +63,7 @@ public sealed class ClientMaid : Maid, IDisposable {
             NetworkStream = TCPClient.GetStream();
 
             // SSL (encrypted)
-            if (Options.SSL) {
+            if (Options.Ssl) {
                 // Create SSL stream
                 SSLStream = new SslStream(NetworkStream, false);
                 // Authenticate stream
@@ -120,7 +120,7 @@ public sealed class ClientMaidOptions : MaidOptions {
     /// Whether to use the server certificate to encrypt the connection.<br/>
     /// Default: <see langword="false"/>
     /// </summary>
-    public bool SSL { get; set; } = false;
+    public bool Ssl { get; set; } = false;
     /// <summary>
     /// The common name of the server certificate. Defaults to the server address if <see langword="null"/>.<br/>
     /// Default: <see langword="null"/>
