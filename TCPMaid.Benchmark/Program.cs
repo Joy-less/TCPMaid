@@ -42,4 +42,7 @@ while (true) {
 }
 
 [MemoryPackable]
-public partial class BlankMessage : Message { }
+public partial record BlankMessage : Message;
+
+[MemoryPackable]
+public partial record ExampleMessage(string ExampleText) : Message;

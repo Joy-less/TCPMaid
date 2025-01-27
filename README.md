@@ -60,9 +60,7 @@ public static void Server() {
 #### Shared
 ```cs
 [MemoryPackable]
-public partial class ExampleMessage(string ExampleText) : Message {
-    public readonly string ExampleText = ExampleText;
-}
+public partial record ExampleMessage(string ExampleText) : Message;
 ```
 #### Output
 ```
@@ -91,12 +89,9 @@ Server.OnReceive += (Channel, Message) => {
 #### Shared
 ```cs
 [MemoryPackable]
-public partial class ExampleRequest : Message {
-}
+public partial record ExampleRequest : Message;
 [MemoryPackable]
-public partial class ExampleResponse(long Id, string ExampleText) : Message(Id) {
-    public readonly string ExampleText = ExampleText;
-}
+public partial record ExampleResponse(long Id, string ExampleText) : Message(Id);
 ```
 #### Output
 ```

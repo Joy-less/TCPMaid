@@ -8,14 +8,18 @@ namespace TCPMaid;
 /// <summary>
 /// The base class for messages that can be serialised and sent across a channel. Should not be reused.
 /// </summary>
-public abstract class Message(long? Id = null) {
+public abstract record Message() {
     /// <summary>
     /// The generated identifier for the message. If this is a response, it should be set to the ID of the request.
     /// </summary>
-    public long Id { get; set; } = Id ?? GenerateId();
+    public long Id { get; set; } = GenerateId();
 
     private static readonly FrozenDictionary<string, Type> MessageTypes = GetMessageTypes();
     private static long LastId;
+
+    public Message(long Id) : this() {
+        this.Id = Id;
+    }
 
     /// <summary>
     /// Serialises the message and its name as an array of bytes.

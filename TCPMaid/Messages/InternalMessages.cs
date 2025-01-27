@@ -3,7 +3,7 @@ using MemoryPack;
 namespace TCPMaid;
 
 [MemoryPackable]
-public sealed partial class DisconnectMessage : Message {
+public sealed partial record DisconnectMessage : Message {
     public string Reason { get; }
 
     internal DisconnectMessage(string Reason) {
@@ -11,7 +11,7 @@ public sealed partial class DisconnectMessage : Message {
     }
 }
 [MemoryPackable]
-public sealed partial class NextFragmentMessage : Message {
+public sealed partial record NextFragmentMessage : Message {
     public long MessageId { get; }
 
     internal NextFragmentMessage(long MessageId) {
@@ -19,18 +19,18 @@ public sealed partial class NextFragmentMessage : Message {
     }
 }
 [MemoryPackable]
-public sealed partial class PingRequest : Message {
+public sealed partial record PingRequest : Message {
     internal PingRequest() {
     }
 }
 [MemoryPackable]
-public sealed partial class PingResponse : Message {
+public sealed partial record PingResponse : Message {
     internal PingResponse(long Id)
         : base(Id) {
     }
 }
 [MemoryPackable]
-public sealed partial class StreamMessage : Message {
+public sealed partial record StreamMessage : Message {
     public string Identifier { get; }
     public long TotalLength { get; }
     public byte[] Fragment { get; }
