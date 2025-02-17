@@ -1,10 +1,11 @@
 using System.Diagnostics;
+using System.Buffers.Binary;
 using System.Net;
 using System.Net.Sockets;
 using System.Net.Security;
 using System.Runtime.InteropServices;
-using static TCPMaid.Extensions;
 using MemoryPack;
+using static TCPMaid.Extensions;
 
 namespace TCPMaid;
 
@@ -82,7 +83,7 @@ public sealed class Channel : IDisposable {
     /// </returns>
     public async Task<bool> SendAsync(Message Message, CancellationToken CancelToken = default) {
         // Create packets from message bytes
-        byte[][] Packets = CreatePackets(Message, Maid.Options.MaxFragmentSize);
+        byte[][] Packets = CreateMessageFragments(Message, Maid.Options.MaxFragmentSize);
 
         // Write bytes to message stream
         try {
@@ -244,7 +245,7 @@ public sealed class Channel : IDisposable {
                 StreamMessage StreamMessage = new(MessageId, Identifier, FromStream.Length, Fragment);
                 // Create packet from stream message
                 byte[] StreamMessageBytes = StreamMessage.ToBytes();
-                byte[] Packet = MemoryPackSerializer.Serialize(new Packet(MessageId, StreamMessageBytes.Length, StreamMessageBytes));
+                byte[] Packet = MemoryPackSerializer.Serialize(new PackedMessageFragment(MessageId, StreamMessageBytes.Length, StreamMessageBytes));
                 // Send packet
                 await Stream.WriteAsync(Packet, CancelToken).ConfigureAwait(false);
                 // Disable first packet flag
@@ -360,50 +361,51 @@ public sealed class Channel : IDisposable {
 
                 // Extract all messages
                 while (true) {
-                    // Ensure length of fragment is complete
+                    // Ensure fragment length is complete
                     if (PendingBytes.Count < sizeof(int)) {
                         break;
                     }
-                    // Get length of fragment
-                    int FragmentLength = BitConverter.ToInt32(CollectionsMarshal.AsSpan(PendingBytes)[..sizeof(int)]);
+                    // Get fragment length bytes
+                    ReadOnlySpan<byte> FragmentLengthBytes = CollectionsMarshal.AsSpan(PendingBytes)[..sizeof(int)];
+                    // Get fragment length
+                    int FragmentLength = BinaryPrimitives.ReadInt32LittleEndian(FragmentLengthBytes);
 
                     // Ensure fragment is complete
                     if (PendingBytes.Count < sizeof(int) + FragmentLength) {
                         break;
                     }
+                    // Get fragment bytes
+                    ReadOnlySpan<byte> FragmentBytes = CollectionsMarshal.AsSpan(PendingBytes).Slice(sizeof(int), FragmentLength);
                     // Get fragment
-                    ReadOnlySpan<byte> Fragment = CollectionsMarshal.AsSpan(PendingBytes).Slice(sizeof(int), FragmentLength);
+                    PackedMessageFragment Fragment = MemoryPackSerializer.Deserialize<PackedMessageFragment>(FragmentBytes);
 
-                    // Remove length and fragment
+                    // Remove length and fragment bytes
                     PendingBytes.RemoveRange(0, sizeof(int) + FragmentLength);
 
-                    // Get fragment data
-                    Packet Packet = MemoryPackSerializer.Deserialize<Packet>(Fragment);
-
                     // Existing message
-                    if (PendingMessages.TryGetValue(Packet.MessageId, out PendingMessage PendingMessage)) {
+                    if (PendingMessages.TryGetValue(Fragment.MessageId, out PendingMessage PendingMessage)) {
                         // Update pending message
-                        PendingMessages[Packet.MessageId] = new PendingMessage(Packet.MessageLength, [.. PendingMessage.CurrentBytes, .. Packet.Bytes]);
+                        PendingMessages[Fragment.MessageId] = new PendingMessage(Fragment.MessageLength, [.. PendingMessage.CurrentBytes, .. Fragment.Bytes]);
                     }
                     // New message
                     else {
                         // Create pending message
-                        PendingMessage = new PendingMessage(Packet.MessageLength, Packet.Bytes);
+                        PendingMessage = new PendingMessage(Fragment.MessageLength, Fragment.Bytes);
                         // Add pending message
-                        PendingMessages.Add(Packet.MessageId, PendingMessage);
+                        PendingMessages.Add(Fragment.MessageId, PendingMessage);
                     }
 
                     // Invoke fragment received with pending message
-                    OnReceiveFragment?.Invoke(Packet.MessageId, PendingMessage.CurrentBytes.Length, PendingMessage.MessageLength);
+                    OnReceiveFragment?.Invoke(Fragment.MessageId, PendingMessage.CurrentBytes.Length, PendingMessage.MessageLength);
 
                     // Ensure message is complete
                     if (PendingMessage.IsIncomplete()) {
                         // Ask for next fragment
-                        _ = SendAsync(new NextFragmentMessage(Packet.MessageId));
+                        _ = SendAsync(new NextFragmentMessage(Fragment.MessageId));
                         break;
                     }
                     // Remove pending message
-                    PendingMessages.Remove(Packet.MessageId);
+                    PendingMessages.Remove(Fragment.MessageId);
 
                     // Deserialise message
                     Message Message = Message.FromBytes(PendingMessage.CurrentBytes);

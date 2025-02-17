@@ -1,13 +1,24 @@
-using MemoryPack;
 using System.Buffers;
+using System.Buffers.Binary;
+using MemoryPack;
 
 namespace TCPMaid;
 
 internal static class Extensions {
     /// <summary>
+    /// Prepends the length of <paramref name="Bytes"/> to itself.
+    /// </summary>
+    public static byte[] PrependLength(in ReadOnlySpan<byte> Bytes) {
+        // Serialize length
+        Span<byte> LengthBytes = stackalloc byte[sizeof(int)];
+        BinaryPrimitives.WriteInt32LittleEndian(LengthBytes, Bytes.Length);
+        // Combine serialized length and bytes
+        return [.. LengthBytes, .. Bytes];
+    }
+    /// <summary>
     /// Breaks up an array into multiple arrays, each of the given size except the last.
     /// </summary>
-    public static T[][] Fragment<T>(T[] Array, int MaxFragmentSize) {
+    public static T[][] SplitFragments<T>(T[] Array, int MaxFragmentSize) {
         // Create fragments array to store all fragments
         int FragmentsCount = (Array.Length + MaxFragmentSize - 1) / MaxFragmentSize;
         T[][] Fragments = new T[FragmentsCount][];
@@ -23,24 +34,35 @@ internal static class Extensions {
         return Fragments;
     }
     /// <summary>
-    /// Converts a message into an array of packets to be sent via a network stream.
+    /// Creates a fragment of a <see cref="Message"/> to be sent via a network stream.
     /// </summary>
-    public static byte[][] CreatePackets(Message Message, int MaxFragmentSize) {
+    public static byte[] CreateMessageFragment(Guid MessageId, int MessageLength, byte[] Bytes) {
+        // Create message fragment
+        PackedMessageFragment MessageFragment = new(MessageId, MessageLength, Bytes);
+        // Serialize message fragment
+        byte[] MessageFragmentBytes = MemoryPackSerializer.Serialize(MessageFragment);
+        // Prepend message fragment length
+        return PrependLength(MessageFragmentBytes);
+    }
+    /// <summary>
+    /// Converts a message into an array of message fragments to be sent via a network stream.
+    /// </summary>
+    public static byte[][] CreateMessageFragments(Message Message, int MaxFragmentSize) {
         // Get bytes
         byte[] Bytes = Message.ToBytes();
-        // Fragment bytes
-        byte[][] Fragments = Fragment(Bytes, MaxFragmentSize);
-        // Create packets array
-        byte[][] Packets = new byte[Fragments.Length][];
-        // Create each packet
-        for (int Index = 0; Index < Fragments.Length; Index++) {
+        // Split bytes into fragments
+        byte[][] BytesFragments = SplitFragments(Bytes, MaxFragmentSize);
+        // Create message fragments array
+        byte[][] MessageFragments = new byte[BytesFragments.Length][];
+        // Create each message fragment
+        for (int Index = 0; Index < BytesFragments.Length; Index++) {
             // Get current fragment
-            byte[] Fragment = Fragments[Index];
-            // Build packet
-            Packets[Index] = MemoryPackSerializer.Serialize(new Packet(Message.Id, Bytes.Length, Fragment));
+            byte[] BytesFragment = BytesFragments[Index];
+            // Create message fragment
+            MessageFragments[Index] = CreateMessageFragment(Message.Id, Bytes.Length, BytesFragment);
         }
         // Return packets
-        return Packets;
+        return MessageFragments;
     }
     /// <summary>
     /// Reads bytes from a stream using a buffer of the given size.

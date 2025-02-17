@@ -1,5 +1,4 @@
 using System.Collections.Frozen;
-using System.Text;
 using MemoryPack;
 
 namespace TCPMaid;
@@ -34,29 +33,23 @@ public abstract record Message() {
     public byte[] ToBytes() {
         // Get message type
         Type MessageType = GetType();
-        // Get message name length bytes
-        byte[] MessageNameLengthBytes = BitConverter.GetBytes(MessageType.Name.Length);
-        // Get message name bytes
-        byte[] MessageNameBytes = Encoding.UTF8.GetBytes(MessageType.Name);
-        // Get message bytes
+        // Serialize message
         byte[] MessageBytes = MemoryPackSerializer.Serialize(MessageType, this);
-        // Create message bytes
-        return [.. MessageNameLengthBytes, .. MessageNameBytes, .. MessageBytes];
+        // Create packed message
+        PackedMessage PackedMessage = new(MessageType.Name, MessageBytes);
+        // Serialize packed message
+        return MemoryPackSerializer.Serialize(PackedMessage);
     }
     /// <summary>
     /// Deserialises an array of bytes as a message.
     /// </summary>
-    public static Message FromBytes(ReadOnlySpan<byte> Bytes) {
-        // Get message name length
-        int MessageNameLength = BitConverter.ToInt32(Bytes[..sizeof(int)]);
-        // Get message name
-        string MessageName = Encoding.UTF8.GetString(Bytes[sizeof(int)..(sizeof(int) + MessageNameLength)]);
-        // Get message bytes
-        ReadOnlySpan<byte> MessageBytes = Bytes[(sizeof(int) + MessageNameLength)..];
+    public static Message FromBytes(in ReadOnlySpan<byte> Bytes) {
+        // Deserialize packed message
+        PackedMessage PackedMessage = MemoryPackSerializer.Deserialize<PackedMessage>(Bytes);
         // Get message type from name
-        Type MessageType = MessageTypes.GetValueOrDefault(MessageName)!;
+        Type MessageType = MessageTypes[PackedMessage.TypeName];
         // Create message
-        return (Message)MemoryPackSerializer.Deserialize(MessageType, MessageBytes)!;
+        return (Message)MemoryPackSerializer.Deserialize(MessageType, PackedMessage.Bytes)!;
     }
 
     /// <summary>
