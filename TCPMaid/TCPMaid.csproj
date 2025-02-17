@@ -1,12 +1,17 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <VersionPrefix>6.0</VersionPrefix>
+    
     <TargetFrameworks>net8.0;net9.0</TargetFrameworks>
     <LangVersion>latest</LangVersion>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <NoWarn>1701;1702;CS1591;CS1573;IDE0290;IDE0305;IDE0130</NoWarn>
-    <WarningLevel>9999</WarningLevel>
+    
+    <!-- CS1573: Parameter has no matching param tag in the XML comment (but other parameters do) -->
+    <!-- IDE0290: Use primary constructor -->
+    <!-- IDE0130: Namespace does not match folder structure -->
+    <NoWarn>CS1573;IDE0290;IDE0130</NoWarn>
+    
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
     <Title>TCPMaid</Title>
     <Authors>Joyless</Authors>

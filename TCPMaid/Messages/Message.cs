@@ -5,7 +5,7 @@ using MemoryPack;
 namespace TCPMaid;
 
 /// <summary>
-/// The base class for messages that can be serialised and sent across a channel. Should not be reused.
+/// The base class for messages that can be serialised and sent across a channel.
 /// </summary>
 public abstract record Message() {
     /// <summary>
@@ -13,8 +13,17 @@ public abstract record Message() {
     /// </summary>
     public Guid Id { get; set; } = Guid.NewGuid();
 
-    private static readonly FrozenDictionary<string, Type> MessageTypes = GetMessageTypes();
+    /// <summary>
+    /// A lookup table for the available <see cref="Message"/> sub-types.
+    /// </summary>
+    /// <remarks>
+    /// This is automatically filled with types found in available assemblies.
+    /// </remarks>
+    public static FrozenDictionary<string, Type> MessageTypes { get; set; } = FindMessageSubTypes();
 
+    /// <summary>
+    /// Constructs a message with a predetermined ID.
+    /// </summary>
     public Message(Guid Id) : this() {
         this.Id = Id;
     }
@@ -45,7 +54,7 @@ public abstract record Message() {
         // Get message bytes
         ReadOnlySpan<byte> MessageBytes = Bytes[(sizeof(int) + MessageNameLength)..];
         // Get message type from name
-        Type MessageType = GetMessageTypeFromName(MessageName)!;
+        Type MessageType = MessageTypes.GetValueOrDefault(MessageName)!;
         // Create message
         return (Message)MemoryPackSerializer.Deserialize(MessageType, MessageBytes)!;
     }
@@ -57,15 +66,8 @@ public abstract record Message() {
         return this is DisconnectMessage or NextFragmentMessage or PingRequest or PingResponse or StreamMessage;
     }
 
-    /// <summary>
-    /// Searches the cached available assemblies for a message type with the given name.
-    /// </summary>
-    public static Type? GetMessageTypeFromName(string Name) {
-        return MessageTypes.GetValueOrDefault(Name);
-    }
-
-    private static FrozenDictionary<string, Type> GetMessageTypes() {
-        return AppDomain.CurrentDomain.GetAssemblies().SelectMany(Asm => Asm.GetTypes())
+    private static FrozenDictionary<string, Type> FindMessageSubTypes() {
+        return AppDomain.CurrentDomain.GetAssemblies().SelectMany(Assembly => Assembly.GetTypes())
             .Where(Type => Type.IsClass && !Type.IsAbstract && Type.IsSubclassOf(typeof(Message))
         ).ToFrozenDictionary(Type => Type.Name);
     }
