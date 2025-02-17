@@ -1,7 +1,6 @@
 using System.Collections.Frozen;
 using System.Text;
 using MemoryPack;
-using static TCPMaid.Extensions;
 
 namespace TCPMaid;
 
@@ -12,12 +11,11 @@ public abstract record Message() {
     /// <summary>
     /// The generated identifier for the message. If this is a response, it should be set to the ID of the request.
     /// </summary>
-    public long Id { get; set; } = GenerateId();
+    public Guid Id { get; set; } = Guid.NewGuid();
 
     private static readonly FrozenDictionary<string, Type> MessageTypes = GetMessageTypes();
-    private static long LastId;
 
-    public Message(long Id) : this() {
+    public Message(Guid Id) : this() {
         this.Id = Id;
     }
 
@@ -34,7 +32,7 @@ public abstract record Message() {
         // Get message bytes
         byte[] MessageBytes = MemoryPackSerializer.Serialize(MessageType, this);
         // Create message bytes
-        return Concat(MessageNameLengthBytes, MessageNameBytes, MessageBytes);
+        return [.. MessageNameLengthBytes, .. MessageNameBytes, .. MessageBytes];
     }
     /// <summary>
     /// Deserialises an array of bytes as a message.
@@ -50,12 +48,6 @@ public abstract record Message() {
         Type MessageType = GetMessageTypeFromName(MessageName)!;
         // Create message
         return (Message)MemoryPackSerializer.Deserialize(MessageType, MessageBytes)!;
-    }
-    /// <summary>
-    /// Generates a unique message identifier.
-    /// </summary>
-    public static long GenerateId() {
-        return Interlocked.Increment(ref LastId);
     }
 
     /// <summary>

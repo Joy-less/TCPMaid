@@ -1,27 +1,9 @@
+using MemoryPack;
 using System.Buffers;
 
 namespace TCPMaid;
 
 internal static class Extensions {
-    /// <summary>
-    /// Merges multiple arrays into one array.
-    /// </summary>
-    public static T[] Concat<T>(params ReadOnlySpan<T[]> Arrays) {
-        // Get total length of merged array
-        int MergedLength = 0;
-        foreach (T[] Array in Arrays) {
-            MergedLength += Array.Length;
-        }
-        // Create merged array
-        T[] MergedArray = new T[MergedLength];
-        // Copy arrays to merged array
-        int CurrentIndex = 0;
-        foreach (T[] Array in Arrays) {
-            Array.CopyTo(MergedArray, CurrentIndex);
-            CurrentIndex += Array.Length;
-        }
-        return MergedArray;
-    }
     /// <summary>
     /// Breaks up an array into multiple arrays, each of the given size except the last.
     /// </summary>
@@ -51,29 +33,14 @@ internal static class Extensions {
         // Create packets array
         byte[][] Packets = new byte[Fragments.Length][];
         // Create each packet
-        for (int i = 0; i < Fragments.Length; i++) {
+        for (int Index = 0; Index < Fragments.Length; Index++) {
             // Get current fragment
-            byte[] Fragment = Fragments[i];
+            byte[] Fragment = Fragments[Index];
             // Build packet
-            Packets[i] = CreatePacket(Message.Id, Fragment, Bytes.Length);
+            Packets[Index] = MemoryPackSerializer.Serialize(new Packet(Message.Id, Bytes.Length, Fragment));
         }
         // Return packets
         return Packets;
-    }
-    /// <summary>
-    /// Converts a byte array and packet data into a packet to be sent via a network stream.
-    /// </summary>
-    public static byte[] CreatePacket(long MessageId, byte[] PartialData, int? TotalMessageLength = null) {
-        return Concat(
-            // Packet length
-            BitConverter.GetBytes(sizeof(long) + sizeof(int) + PartialData.Length),
-            // Message ID
-            BitConverter.GetBytes(MessageId),
-            // Total message length
-            BitConverter.GetBytes(TotalMessageLength ?? PartialData.Length),
-            // Fragment data
-            PartialData
-        );
     }
     /// <summary>
     /// Reads bytes from a stream using a buffer of the given size.

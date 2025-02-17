@@ -12,9 +12,9 @@ public sealed partial record DisconnectMessage : Message {
 }
 [MemoryPackable]
 public sealed partial record NextFragmentMessage : Message {
-    public long MessageId { get; }
+    public Guid MessageId { get; }
 
-    internal NextFragmentMessage(long MessageId) {
+    internal NextFragmentMessage(Guid MessageId) {
         this.MessageId = MessageId;
     }
 }
@@ -25,7 +25,7 @@ public sealed partial record PingRequest : Message {
 }
 [MemoryPackable]
 public sealed partial record PingResponse : Message {
-    internal PingResponse(long Id)
+    internal PingResponse(Guid Id)
         : base(Id) {
     }
 }
@@ -35,7 +35,7 @@ public sealed partial record StreamMessage : Message {
     public long TotalLength { get; }
     public byte[] Fragment { get; }
 
-    internal StreamMessage(long Id, string Identifier, long TotalLength, byte[] Fragment)
+    internal StreamMessage(Guid Id, string Identifier, long TotalLength, byte[] Fragment)
         : base(Id) {
         this.Identifier = Identifier;
         this.TotalLength = TotalLength;
