@@ -91,7 +91,7 @@ Server.OnReceive += (Channel, Message) => {
 [MemoryPackable]
 public partial record ExampleRequest : Message;
 [MemoryPackable]
-public partial record ExampleResponse(long Id, string ExampleText) : Message(Id);
+public partial record ExampleResponse(Guid Id, string ExampleText) : Message(Id);
 ```
 #### Output
 ```
