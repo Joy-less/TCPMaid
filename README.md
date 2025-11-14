@@ -8,6 +8,9 @@ An easy, powerful and lightweight TCP client/server in C#.
 
 TCPMaid makes it easy to setup a robust client & server, send messages and requests, and provide your own SSL certificate.
 
+> [!WARNING]
+> This repository is now in critical maintenance mode. Consider using embedded alternatives like [Godot's RPCs](https://docs.godotengine.org/en/stable/tutorials/networking/high_level_multiplayer.html)!
+
 ## Features
 - Easy client & server setup
 - Supports SSL (TLS) encryption and certificates
